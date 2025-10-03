@@ -62,6 +62,19 @@ Copy `sample.env` to `.env` and modify the following settings:
 - `PVP_ENABLED`: Enable/disable player vs player combat
 - `ONLINE_MODE`: Enable Mojang authentication (set to false for offline/cracked servers)
 
+### Plugin Installation
+
+- `DEFAULT_PLUGINS`: Comma-separated list of plugin download URLs to install automatically on server startup
+
+**Example**:
+```bash
+DEFAULT_PLUGINS=https://example.com/plugin1.jar,https://example.com/plugin2.jar
+```
+
+The server will automatically download and install these plugins to the `plugins` directory during setup. Plugins that already exist will be skipped (not re-downloaded). If a plugin download fails, the server will log a warning but continue with the remaining plugins.
+
+**Note**: To update an existing plugin, remove the old version from the plugins directory first, then restart the server.
+
 ### Docker Configuration (for Parallel Servers)
 
 These settings allow you to run multiple server instances in parallel without conflicts:
