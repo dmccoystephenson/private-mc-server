@@ -41,17 +41,33 @@ send_alert() {
     
     # Try to send alert, but don't fail if it doesn't work
     if command -v curl >/dev/null 2>&1; then
-        log_info "Sending alert: $title ($level)" >&2
-        curl -X POST "$alert_url" \
+        log_info "Sending alert to $alert_url: $title ($level)" >&2
+        
+        # Capture HTTP response code and any error output
+        local http_code
+        local curl_output
+        curl_output=$(curl -X POST "$alert_url" \
           -H "Content-Type: application/json" \
-          -s -o /dev/null -w "" \
+          -w "\n%{http_code}" \
           --max-time 5 \
+          --connect-timeout 5 \
           -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
-          2>/dev/null || true
+          2>&1 || echo "CURL_FAILED")
+        
+        http_code=$(echo "$curl_output" | tail -1)
+        
+        if [ "$curl_output" = "CURL_FAILED" ]; then
+            log_warning "Alert failed: curl command failed (connection error or timeout)" >&2
+        elif [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            log_success "Alert sent successfully (HTTP $http_code)" >&2
+        else
+            log_warning "Alert failed: HTTP $http_code" >&2
+        fi
     else
         log_warning "curl not available, skipping alert: $title" >&2
     fi
 }
+
 
 # Function to load env value
 get_env_value() {

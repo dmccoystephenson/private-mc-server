@@ -19,13 +19,28 @@ send_alert() {
     
     # Try to send alert, but don't fail if it doesn't work
     if command -v curl >/dev/null 2>&1; then
-        log "Sending alert: $title ($level)"
-        curl -X POST "$alert_url" \
+        log "Sending alert to $alert_url: $title ($level)"
+        
+        # Capture HTTP response code and any error output
+        local http_code
+        local curl_output
+        curl_output=$(curl -X POST "$alert_url" \
           -H "Content-Type: application/json" \
-          -s -o /dev/null -w "" \
+          -w "\n%{http_code}" \
           --max-time 5 \
+          --connect-timeout 5 \
           -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
-          2>/dev/null || true
+          2>&1 || echo "CURL_FAILED")
+        
+        http_code=$(echo "$curl_output" | tail -1)
+        
+        if [ "$curl_output" = "CURL_FAILED" ]; then
+            log "Alert failed: curl command failed (connection error or timeout)"
+        elif [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            log "Alert sent successfully (HTTP $http_code)"
+        else
+            log "Alert failed: HTTP $http_code"
+        fi
     else
         log "curl not available, skipping alert: $title"
     fi
