@@ -10,6 +10,7 @@ An open, community-agnostic, Docker-based Minecraft server infrastructure runnin
 - **Docker Containerized**: Easy deployment and management
 - **Web Dashboard**: Built-in Spring Boot web application for server management
 - **Automated Backups**: Scheduled backups with automatic cleanup and size management
+- **Alert Notifications**: Discord notifications for server events and admin alerts
 - **Configurable**: Environment-based configuration
 - **Persistent Data**: Server data persists across container restarts
 - **Easy Management**: Simple scripts for starting and stopping the server
@@ -37,9 +38,10 @@ An open, community-agnostic, Docker-based Minecraft server infrastructure runnin
 
 3. **Build the applications**
    ```bash
-   chmod +x build-webapp.sh build-backup-manager.sh
+   chmod +x build-webapp.sh build-backup-manager.sh build-alert-manager.sh
    ./build-webapp.sh
    ./build-backup-manager.sh
+   ./build-alert-manager.sh
    ```
 
 4. **Start the server**
@@ -156,6 +158,19 @@ These settings allow you to run multiple server instances in parallel without co
 
 See [backup-manager/README.md](backup-manager/README.md) for detailed cron expression examples and configuration.
 
+### Alert Manager Configuration
+
+- `ALERT_CONTAINER_NAME`: Alert manager container name (default: `open-mc-alert-manager`)
+- `DISCORD_WEBHOOK_URL`: Discord webhook URL for sending notifications (optional)
+- `DISCORD_ENABLED`: Enable/disable Discord notifications (default: `false`)
+
+To enable Discord notifications:
+1. Create a webhook in your Discord server (Server Settings → Integrations → Webhooks)
+2. Copy the webhook URL and add it to your `.env` file
+3. Set `DISCORD_ENABLED=true`
+
+See [alert-manager/README.md](alert-manager/README.md) for detailed configuration and usage examples.
+
 **Running Parallel Development Servers**: To run multiple servers simultaneously (e.g., for testing different configurations), create separate `.env` files with different values for these settings and use `docker compose --env-file <env-file>` to start each server.
 
 Example for a second server:
@@ -171,6 +186,7 @@ cp sample.env .env.dev2
 # - WEB_CONTAINER_NAME=open-mc-webapp-dev2
 # - NGINX_CONTAINER_NAME=open-mc-nginx-dev2
 # - BACKUP_CONTAINER_NAME=open-mc-backup-manager-dev2
+# - ALERT_CONTAINER_NAME=open-mc-alert-manager-dev2
 # - WEB_HTTP_PORT=8081
 # - WEB_HTTPS_PORT=8444
 

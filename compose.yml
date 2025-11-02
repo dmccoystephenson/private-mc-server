@@ -88,6 +88,18 @@ services:
       - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 0 2 * * ?}
       - VOLUME_NAME=${VOLUME_NAME:-mcserver}
 
+  alert-manager:
+    build:
+      context: ./alert-manager
+    image: open-mc-server-alert-manager
+    restart: always
+    container_name: ${ALERT_CONTAINER_NAME:-open-mc-alert-manager}
+    expose:
+      - "8090"
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - DISCORD_ENABLED=${DISCORD_ENABLED:-false}
+
 volumes:
   mcserver:
     name: ${VOLUME_NAME:-mcserver}
