@@ -161,6 +161,7 @@ See [backup-manager/README.md](backup-manager/README.md) for detailed cron expre
 ### Alert Manager Configuration
 
 - `ALERT_CONTAINER_NAME`: Alert manager container name (default: `open-mc-alert-manager`)
+- `ALERT_PORT`: Alert manager API port (default: `8090`)
 - `DISCORD_WEBHOOK_URL`: Discord webhook URL for sending notifications (optional)
 - `DISCORD_ENABLED`: Enable/disable Discord notifications (default: `false`)
 
@@ -168,6 +169,8 @@ To enable Discord notifications:
 1. Create a webhook in your Discord server (Server Settings → Integrations → Webhooks)
 2. Copy the webhook URL and add it to your `.env` file
 3. Set `DISCORD_ENABLED=true`
+
+The alert manager API is accessible on the configured port (default: 8090) for testing and integration from the host machine.
 
 See [alert-manager/README.md](alert-manager/README.md) for detailed configuration and usage examples.
 
@@ -187,6 +190,7 @@ cp sample.env .env.dev2
 # - NGINX_CONTAINER_NAME=open-mc-nginx-dev2
 # - BACKUP_CONTAINER_NAME=open-mc-backup-manager-dev2
 # - ALERT_CONTAINER_NAME=open-mc-alert-manager-dev2
+# - ALERT_PORT=8091
 # - WEB_HTTP_PORT=8081
 # - WEB_HTTPS_PORT=8444
 

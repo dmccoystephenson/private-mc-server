@@ -3,7 +3,8 @@
 # This can be used from other modules like backup-manager or web-app
 
 # Alert manager endpoint
-ALERT_MANAGER_URL="${ALERT_MANAGER_URL:-http://alert-manager:8090/api/alerts}"
+# When running from host, use localhost. When running from another container, use alert-manager
+ALERT_MANAGER_URL="${ALERT_MANAGER_URL:-http://localhost:8090/api/alerts}"
 
 # Function to send an alert
 send_alert() {

@@ -161,13 +161,23 @@ Run tests:
 
 ### Integration Testing
 
-An example integration script is provided to test the alert-manager:
+An example integration script is provided to test the alert-manager from the host machine:
 
 ```bash
 ./example-integration.sh
 ```
 
-This script demonstrates how to send alerts from other modules and verifies that the alert-manager API is working correctly.
+This script sends alerts to `http://localhost:8090/api/alerts` by default. To use it from within another container, set the `ALERT_MANAGER_URL` environment variable:
+
+```bash
+# From host machine (default)
+./example-integration.sh
+
+# From within a container
+ALERT_MANAGER_URL=http://alert-manager:8090/api/alerts ./example-integration.sh
+```
+
+The script demonstrates how to send alerts from other modules and verifies that the alert-manager API is working correctly.
 
 ## Running
 

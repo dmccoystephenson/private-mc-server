@@ -94,8 +94,8 @@ services:
     image: open-mc-server-alert-manager
     restart: always
     container_name: ${ALERT_CONTAINER_NAME:-open-mc-alert-manager}
-    expose:
-      - "8090"
+    ports:
+      - "${ALERT_PORT:-8090}:8090"
     environment:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
       - DISCORD_ENABLED=${DISCORD_ENABLED:-false}
