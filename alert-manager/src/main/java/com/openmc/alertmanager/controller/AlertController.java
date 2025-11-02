@@ -35,7 +35,7 @@ public class AlertController {
             return ResponseEntity.ok("Alert sent successfully");
         } catch (Exception e) {
             log.error("Failed to send alert", e);
-            return ResponseEntity.internalServerError().body("Failed to send alert: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Failed to send alert");
         }
     }
 
