@@ -1,8 +1,16 @@
 FROM ubuntu as base
 
 # Install dependencies
-RUN apt update
-RUN DEBIAN_FRONTEND=noninteractive apt install -y wget git openjdk-21-jdk openjdk-21-jre curl
+# Update package index and install without recommended packages to minimize dependencies
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        wget \
+        git \
+        openjdk-21-jdk \
+        openjdk-21-jre \
+        curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM base as builder
 
