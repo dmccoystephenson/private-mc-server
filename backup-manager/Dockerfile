@@ -3,7 +3,11 @@
 FROM eclipse-temurin:21-jre
 
 # Install docker CLI and curl for alert notifications
-RUN apt-get update && apt-get install -y docker.io curl && rm -rf /var/lib/apt/lists/*
+# Update package index and install without recommended packages to minimize dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends docker.io curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
