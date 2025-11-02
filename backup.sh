@@ -41,12 +41,15 @@ send_alert() {
     
     # Try to send alert, but don't fail if it doesn't work
     if command -v curl >/dev/null 2>&1; then
+        log_info "Sending alert: $title ($level)" >&2
         curl -X POST "$alert_url" \
           -H "Content-Type: application/json" \
           -s -o /dev/null -w "" \
           --max-time 5 \
           -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
           2>/dev/null || true
+    else
+        log_warning "curl not available, skipping alert: $title" >&2
     fi
 }
 

@@ -2,7 +2,7 @@ FROM ubuntu as base
 
 # Install dependencies
 RUN apt update
-RUN DEBIAN_FRONTEND=noninteractive apt install -y wget git openjdk-21-jdk openjdk-21-jre
+RUN DEBIAN_FRONTEND=noninteractive apt install -y wget git openjdk-21-jdk openjdk-21-jre curl
 
 FROM base as builder
 
