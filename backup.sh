@@ -37,7 +37,19 @@ send_alert() {
     local level="${3:-INFO}"
     local source="backup-script"
     
-    local alert_url="${ALERT_MANAGER_URL:-http://alert-manager:8090/api/alerts}"
+    # Determine the alert manager URL based on environment
+    # If ALERT_MANAGER_URL is set, use it
+    # Otherwise, check if we're in a container or on the host
+    local alert_url
+    if [ -n "${ALERT_MANAGER_URL:-}" ]; then
+        alert_url="$ALERT_MANAGER_URL"
+    elif [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+        # Running inside a Docker container, use internal service name
+        alert_url="http://alert-manager:8090/api/alerts"
+    else
+        # Running on host, use localhost
+        alert_url="http://localhost:8090/api/alerts"
+    fi
     
     # Try to send alert, but don't fail if it doesn't work
     if command -v curl >/dev/null 2>&1; then
