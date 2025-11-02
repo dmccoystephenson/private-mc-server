@@ -8,6 +8,26 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WRAPPER] $1"
 }
 
+# Function: Send alert to alert-manager
+send_alert() {
+    local title="$1"
+    local message="$2"
+    local level="${3:-INFO}"
+    local source="minecraft-server"
+    
+    local alert_url="${ALERT_MANAGER_URL:-http://alert-manager:8090/api/alerts}"
+    
+    # Try to send alert, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        curl -X POST "$alert_url" \
+          -H "Content-Type: application/json" \
+          -s -o /dev/null -w "" \
+          --max-time 5 \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          2>/dev/null || true
+    fi
+}
+
 # Variables
 SERVER_JAR="$1"
 SERVER_DIR="$2" 
@@ -49,6 +69,9 @@ graceful_shutdown() {
         wait "$PID" 2>/dev/null || true
         
         log "Server shutdown gracefully"
+        
+        # Send alert that server has stopped
+        send_alert "Minecraft Server Stopped" "The Minecraft server has been shut down gracefully." "INFO"
     else
         log "No server process found or already terminated."
     fi
@@ -101,6 +124,9 @@ java $JAVA_OPTS -jar "$SERVER_JAR" nogui < "$INPUT_FIFO" &
 PID=$!
 
 log "Minecraft server started with PID: $PID"
+
+# Send alert that server has started
+send_alert "Minecraft Server Started" "The Minecraft server has started successfully." "INFO"
 
 # Wait until the server process finishes or a termination signal is received
 wait "$PID"

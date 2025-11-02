@@ -30,6 +30,26 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to send an alert to the alert-manager
+send_alert() {
+    local title="$1"
+    local message="$2"
+    local level="${3:-INFO}"
+    local source="backup-script"
+    
+    local alert_url="${ALERT_MANAGER_URL:-http://alert-manager:8090/api/alerts}"
+    
+    # Try to send alert, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        curl -X POST "$alert_url" \
+          -H "Content-Type: application/json" \
+          -s -o /dev/null -w "" \
+          --max-time 5 \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          2>/dev/null || true
+    fi
+}
+
 # Function to load env value
 get_env_value() {
     local key=$1
@@ -129,6 +149,10 @@ create_backup() {
         log_info "This is normal for a running server and the backup should still be usable." >&2
     else
         log_error "Backup failed! Exit code: $docker_exit_code" >&2
+        
+        # Send failure alert
+        send_alert "Backup Failed" "Minecraft server backup creation failed with exit code: $docker_exit_code" "ERROR"
+        
         return 1
     fi
     
@@ -137,10 +161,18 @@ create_backup() {
         local backup_size
         backup_size=$(du -h "$backup_dir/mcserver-backup.tar.gz" | cut -f1)
         log_success "Backup created successfully: $backup_dir/mcserver-backup.tar.gz ($backup_size)" >&2
+        
+        # Send success alert
+        send_alert "Backup Completed" "Minecraft server backup created successfully. Size: $backup_size, Location: $backup_dir" "INFO"
+        
         echo "$backup_dir"
         return 0
     else
         log_error "Backup verification failed!" >&2
+        
+        # Send failure alert
+        send_alert "Backup Failed" "Minecraft server backup verification failed!" "ERROR"
+        
         return 1
     fi
 }
