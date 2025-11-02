@@ -1,5 +1,6 @@
 package com.openmc.alertmanager.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openmc.alertmanager.exception.AlertException;
 import com.openmc.alertmanager.model.Alert;
 import com.openmc.alertmanager.model.AlertLevel;
@@ -21,6 +22,12 @@ import java.util.Map;
 @Slf4j
 public class DiscordAlertService {
 
+    // Discord embed colors
+    private static final int DISCORD_COLOR_BLUE = 3447003;      // Blue for INFO
+    private static final int DISCORD_COLOR_YELLOW = 16776960;  // Yellow for WARNING
+    private static final int DISCORD_COLOR_RED = 15158332;     // Red for ERROR
+    private static final int DISCORD_COLOR_DARK_RED = 10038562; // Dark Red for CRITICAL
+
     @Value("${discord.webhook.url:}")
     private String webhookUrl;
 
@@ -28,9 +35,11 @@ public class DiscordAlertService {
     private boolean enabled;
 
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
-    public DiscordAlertService() {
-        this.restTemplate = new RestTemplate();
+    public DiscordAlertService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -69,21 +78,25 @@ public class DiscordAlertService {
      * @param alert The alert to convert to Discord format
      * @return JSON payload string
      */
-    private String buildDiscordPayload(Alert alert) {
-        Map<String, Object> embed = new HashMap<>();
-        embed.put("title", alert.getTitle());
-        embed.put("description", alert.getMessage());
-        embed.put("color", getColorForLevel(alert.getLevel()));
-        embed.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
-        
-        Map<String, Object> footer = new HashMap<>();
-        footer.put("text", "Source: " + (alert.getSource() != null ? alert.getSource() : "unknown"));
-        embed.put("footer", footer);
+    private String buildDiscordPayload(Alert alert) throws AlertException {
+        try {
+            Map<String, Object> embed = new HashMap<>();
+            embed.put("title", alert.getTitle());
+            embed.put("description", alert.getMessage());
+            embed.put("color", getColorForLevel(alert.getLevel()));
+            embed.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+            
+            Map<String, Object> footer = new HashMap<>();
+            footer.put("text", "Source: " + (alert.getSource() != null ? alert.getSource() : "unknown"));
+            embed.put("footer", footer);
 
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("embeds", new Object[]{embed});
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("embeds", new Object[]{embed});
 
-        return toJson(payload);
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            throw new AlertException("Failed to serialize Discord payload", e);
+        }
     }
 
     /**
@@ -94,10 +107,10 @@ public class DiscordAlertService {
      */
     private int getColorForLevel(AlertLevel level) {
         return switch (level) {
-            case INFO -> 3447003;      // Blue
-            case WARNING -> 16776960;  // Yellow
-            case ERROR -> 15158332;    // Red
-            case CRITICAL -> 10038562; // Dark Red
+            case INFO -> DISCORD_COLOR_BLUE;
+            case WARNING -> DISCORD_COLOR_YELLOW;
+            case ERROR -> DISCORD_COLOR_RED;
+            case CRITICAL -> DISCORD_COLOR_DARK_RED;
         };
     }
 
@@ -124,53 +137,6 @@ public class DiscordAlertService {
             }
         } catch (Exception e) {
             throw new AlertException("Failed to send Discord webhook", e);
-        }
-    }
-
-    /**
-     * Simple JSON conversion (using basic string formatting)
-     * For production use, consider using a proper JSON library
-     *
-     * @param map The map to convert to JSON
-     * @return JSON string
-     */
-    private String toJson(Map<String, Object> map) {
-        StringBuilder json = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (!first) json.append(",");
-            first = false;
-            json.append("\"").append(entry.getKey()).append("\":");
-            json.append(toJsonValue(entry.getValue()));
-        }
-        json.append("}");
-        return json.toString();
-    }
-
-    private String toJsonValue(Object value) {
-        if (value == null) {
-            return "null";
-        } else if (value instanceof String) {
-            return "\"" + ((String) value).replace("\"", "\\\"").replace("\n", "\\n") + "\"";
-        } else if (value instanceof Number) {
-            return value.toString();
-        } else if (value instanceof Boolean) {
-            return value.toString();
-        } else if (value instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> mapValue = (Map<String, Object>) value;
-            return toJson(mapValue);
-        } else if (value instanceof Object[]) {
-            StringBuilder array = new StringBuilder("[");
-            Object[] arrayValue = (Object[]) value;
-            for (int i = 0; i < arrayValue.length; i++) {
-                if (i > 0) array.append(",");
-                array.append(toJsonValue(arrayValue[i]));
-            }
-            array.append("]");
-            return array.toString();
-        } else {
-            return "\"" + value.toString() + "\"";
         }
     }
 }
