@@ -159,6 +159,16 @@ Run tests:
 ./gradlew test
 ```
 
+### Integration Testing
+
+An example integration script is provided to test the alert-manager:
+
+```bash
+./example-integration.sh
+```
+
+This script demonstrates how to send alerts from other modules and verifies that the alert-manager API is working correctly.
+
 ## Running
 
 The alert-manager is automatically started with the rest of the infrastructure:
