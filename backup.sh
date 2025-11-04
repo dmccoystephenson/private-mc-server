@@ -36,6 +36,16 @@ send_alert() {
     local message="$2"
     local level="${3:-INFO}"
     local source="backup-script"
+    local alert_toggle="${4:-}"
+    
+    # Check if this type of alert is enabled (if toggle variable is provided)
+    if [ -n "$alert_toggle" ]; then
+        local toggle_value="${!alert_toggle:-true}"
+        if [ "$toggle_value" != "true" ]; then
+            log_info "Alert skipped (disabled via $alert_toggle): $title" >&2
+            return 0
+        fi
+    fi
     
     # Determine the alert manager URL based on environment
     # If ALERT_MANAGER_URL is set, use it
@@ -182,7 +192,7 @@ create_backup() {
         log_error "Backup failed! Exit code: $docker_exit_code" >&2
         
         # Send failure alert
-        send_alert "Backup Failed" "Minecraft server backup creation failed with exit code: $docker_exit_code" "ERROR"
+        send_alert "Backup Failed" "Minecraft server backup creation failed with exit code: $docker_exit_code" "ERROR" "ALERTS_BACKUP_FAILURE"
         
         return 1
     fi
@@ -194,7 +204,7 @@ create_backup() {
         log_success "Backup created successfully: $backup_dir/mcserver-backup.tar.gz ($backup_size)" >&2
         
         # Send success alert
-        send_alert "Backup Completed" "Minecraft server backup created successfully. Size: $backup_size, Location: $backup_dir" "INFO"
+        send_alert "Backup Completed" "Minecraft server backup created successfully. Size: $backup_size, Location: $backup_dir" "INFO" "ALERTS_BACKUP_SUCCESS"
         
         echo "$backup_dir"
         return 0
@@ -202,7 +212,7 @@ create_backup() {
         log_error "Backup verification failed!" >&2
         
         # Send failure alert
-        send_alert "Backup Failed" "Minecraft server backup verification failed!" "ERROR"
+        send_alert "Backup Failed" "Minecraft server backup verification failed!" "ERROR" "ALERTS_BACKUP_FAILURE"
         
         return 1
     fi

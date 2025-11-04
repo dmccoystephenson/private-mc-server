@@ -14,6 +14,16 @@ send_alert() {
     local message="$2"
     local level="${3:-INFO}"
     local source="minecraft-server"
+    local alert_toggle="${4:-}"
+    
+    # Check if this type of alert is enabled (if toggle variable is provided)
+    if [ -n "$alert_toggle" ]; then
+        local toggle_value="${!alert_toggle:-true}"
+        if [ "$toggle_value" != "true" ]; then
+            log "Alert skipped (disabled via $alert_toggle): $title"
+            return 0
+        fi
+    fi
     
     local alert_url="${ALERT_MANAGER_URL:-http://alert-manager:8090/api/alerts}"
     
@@ -89,7 +99,7 @@ graceful_shutdown() {
         log "Server shutdown gracefully"
         
         # Send alert that server has stopped
-        send_alert "Minecraft Server Stopped" "The Minecraft server has been shut down gracefully." "INFO"
+        send_alert "Minecraft Server Stopped" "The Minecraft server has been shut down gracefully." "INFO" "ALERTS_SERVER_STOP"
     else
         log "No server process found or already terminated."
     fi
@@ -144,7 +154,7 @@ PID=$!
 log "Minecraft server started with PID: $PID"
 
 # Send alert that server has started
-send_alert "Minecraft Server Started" "The Minecraft server has started successfully." "INFO"
+send_alert "Minecraft Server Started" "The Minecraft server has started successfully." "INFO" "ALERTS_SERVER_START"
 
 # Wait until the server process finishes or a termination signal is received
 wait "$PID"
@@ -154,4 +164,10 @@ EXIT_CODE=$?
 kill "$FIFO_KEEPER_PID" 2>/dev/null || true
 
 log "Minecraft server process exited with code: $EXIT_CODE"
+
+# Send alert if server crashed (non-zero exit code, not from graceful shutdown)
+if [ $EXIT_CODE -ne 0 ]; then
+    send_alert "Minecraft Server Crashed" "The Minecraft server exited unexpectedly with code $EXIT_CODE. Check logs for details." "ERROR" "ALERTS_SERVER_CRASH"
+fi
+
 exit $EXIT_CODE

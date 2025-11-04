@@ -165,6 +165,17 @@ See [backup-manager/README.md](backup-manager/README.md) for detailed cron expre
 - `DISCORD_WEBHOOK_URL`: Discord webhook URL for sending notifications (optional)
 - `DISCORD_ENABLED`: Enable/disable Discord notifications (default: `false`)
 
+**Alert Toggles** - Fine-grained control over which events trigger alerts:
+- `ALERTS_SERVER_START`: Alert when server starts (default: `true`)
+- `ALERTS_SERVER_STOP`: Alert when server stops gracefully (default: `true`)
+- `ALERTS_SERVER_CRASH`: Alert when server crashes unexpectedly (default: `true`)
+- `ALERTS_BACKUP_SUCCESS`: Alert when backup completes successfully (default: `true`)
+- `ALERTS_BACKUP_FAILURE`: Alert when backup fails (default: `true`)
+- `ALERTS_UPGRADE_START`: Alert when upgrade process begins (default: `true`)
+- `ALERTS_UPGRADE_COMPLETE`: Alert when upgrade completes successfully (default: `true`)
+- `ALERTS_UPGRADE_FAILURE`: Alert when upgrade fails (default: `true`)
+- `ALERTS_CONFIG_WARNING`: Alert when server starts with configuration warnings (default: `false`)
+
 To enable Discord notifications:
 1. Create a webhook in your Discord server (Server Settings → Integrations → Webhooks)
 2. Copy the webhook URL and add it to your `.env` file
