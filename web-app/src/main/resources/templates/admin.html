@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Console - Minecraft Server Dashboard</title>
+    <title th:text="'Admin Console - ' + ${dashboardTitle}">Admin Console - Minecraft Server Dashboard</title>
     <style>
+        :root {
+            --primary-color: /*[[${dashboardPrimaryColor}]]*/ #667eea;
+            --secondary-color: /*[[${dashboardSecondaryColor}]]*/ #764ba2;
+            --gradient-bg: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -13,7 +19,7 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-bg);
             min-height: 100vh;
             padding: 20px;
         }
@@ -35,6 +41,12 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+        
         .nav {
             text-align: center;
             margin-bottom: 20px;
@@ -48,6 +60,8 @@
             border-radius: 8px;
             margin: 0 5px;
             transition: background 0.3s ease;
+            display: inline-block;
+            margin-bottom: 10px;
         }
         
         .nav a:hover {
@@ -65,6 +79,12 @@
             padding: 25px;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .card {
+                padding: 15px;
+            }
         }
         
         .card h2 {
@@ -86,7 +106,7 @@
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-bg);
             color: white;
         }
         
@@ -144,7 +164,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 Minecraft Server Dashboard</h1>
+            <h1 th:text="'🎮 ' + ${dashboardTitle}">🎮 Minecraft Server Dashboard</h1>
             <p>Admin Console</p>
         </div>
         

@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Server Dashboard</title>
+    <title th:text="${dashboardTitle}">Minecraft Server Dashboard</title>
     <style>
+        :root {
+            --primary-color: /*[[${dashboardPrimaryColor}]]*/ #667eea;
+            --secondary-color: /*[[${dashboardSecondaryColor}]]*/ #764ba2;
+            --gradient-bg: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -13,14 +19,50 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-bg);
             min-height: 100vh;
             padding: 20px;
         }
         
-        .container {
-            max-width: 1000px;
+        /* Grid Layout for Desktop with Sidebars */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            max-width: 1400px;
             margin: 0 auto;
+        }
+        
+        @media (min-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 250px 1fr 250px;
+                grid-template-areas:
+                    "header header header"
+                    "left-sidebar main right-sidebar";
+            }
+            
+            .header-section {
+                grid-area: header;
+            }
+            
+            .left-sidebar {
+                grid-area: left-sidebar;
+            }
+            
+            .main-content {
+                grid-area: main;
+            }
+            
+            .right-sidebar {
+                grid-area: right-sidebar;
+            }
+        }
+        
+        @media (max-width: 1023px) {
+            .left-sidebar,
+            .right-sidebar {
+                display: none;
+            }
         }
         
         .header {
@@ -33,6 +75,12 @@
             font-size: 2.5em;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
         }
         
         .nav {
@@ -48,6 +96,8 @@
             border-radius: 8px;
             margin: 0 5px;
             transition: background 0.3s ease;
+            display: inline-block;
+            margin-bottom: 10px;
         }
         
         .nav a:hover {
@@ -67,10 +117,38 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
+        @media (max-width: 768px) {
+            .card {
+                padding: 15px;
+            }
+        }
+        
         .card h2 {
             color: #333;
             margin-bottom: 15px;
             font-size: 1.5em;
+        }
+        
+        .card h3 {
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .sidebar-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 8px;
         }
         
         .status-indicator {
@@ -96,6 +174,7 @@
             justify-content: space-between;
             padding: 12px 0;
             border-bottom: 1px solid #e5e7eb;
+            flex-wrap: wrap;
         }
         
         .info-row:last-child {
@@ -109,6 +188,12 @@
         
         .info-value {
             color: #111827;
+            text-align: right;
+        }
+        
+        .relative-time {
+            font-size: 0.9em;
+            color: #6b7280;
         }
         
         .links {
@@ -130,7 +215,7 @@
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-bg);
             color: white;
         }
         
@@ -144,6 +229,7 @@
             font-style: italic;
         }
         
+        /* Line Chart Styles */
         .chart-container {
             position: relative;
             height: 300px;
@@ -153,56 +239,16 @@
             border-radius: 8px;
         }
         
-        .chart-bars {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-around;
-            height: 250px;
-            border-bottom: 2px solid #e5e7eb;
-            padding: 0 10px;
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 250px;
+                padding: 10px;
+            }
         }
         
-        .chart-bar-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0 5px;
-        }
-        
-        .chart-bar {
+        .chart-canvas {
             width: 100%;
-            min-height: 5px;
-            border-radius: 4px 4px 0 0;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .chart-bar:hover {
-            opacity: 0.8;
-        }
-        
-        .chart-bar.success {
-            background: linear-gradient(to top, #22c55e, #86efac);
-        }
-        
-        .chart-bar.error {
-            background: linear-gradient(to top, #ef4444, #fca5a5);
-        }
-        
-        .chart-label {
-            font-size: 11px;
-            color: #6b7280;
-            margin-top: 8px;
-            transform: rotate(-45deg);
-            white-space: nowrap;
-        }
-        
-        .chart-value {
-            font-size: 12px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 5px;
+            height: 100%;
         }
         
         .chart-legend {
@@ -210,6 +256,7 @@
             justify-content: center;
             gap: 20px;
             margin-top: 15px;
+            flex-wrap: wrap;
         }
         
         .chart-legend-item {
@@ -222,8 +269,8 @@
         
         .chart-legend-color {
             width: 20px;
-            height: 20px;
-            border-radius: 4px;
+            height: 3px;
+            border-radius: 2px;
         }
         
         .chart-section-title {
@@ -233,17 +280,21 @@
             margin-bottom: 10px;
         }
         
-        .chart-bar.memory {
-            background: linear-gradient(to top, #3b82f6, #93c5fd);
-        }
-        
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
+            overflow-x: auto;
+            display: block;
+        }
+        
+        @media (min-width: 768px) {
+            .leaderboard-table {
+                display: table;
+            }
         }
         
         .leaderboard-table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-bg);
             color: white;
             padding: 12px;
             text-align: left;
@@ -261,7 +312,7 @@
         
         .leaderboard-rank {
             font-weight: 700;
-            color: #764ba2;
+            color: var(--secondary-color);
             font-size: 1.2em;
         }
         
@@ -276,19 +327,116 @@
         .leaderboard-rank.bronze {
             color: #cd7f32;
         }
+        
+        .quick-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .quick-stat:last-child {
+            border-bottom: none;
+        }
+        
+        .quick-stat-label {
+            font-size: 0.9em;
+            color: #6b7280;
+        }
+        
+        .quick-stat-value {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #111827;
+        }
+        
+        .activity-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.9em;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-time {
+            color: #9ca3af;
+            font-size: 0.85em;
+        }
+        
+        .activity-text {
+            color: #374151;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎮 Minecraft Server Dashboard</h1>
-            <p>Server Information</p>
+    <div class="dashboard-grid">
+        <!-- Header Section -->
+        <div class="header-section">
+            <div class="header">
+                <h1 th:text="'🎮 ' + ${dashboardTitle}">🎮 Minecraft Server Dashboard</h1>
+                <p th:text="${dashboardSubtitle}">Server Management & Information</p>
+            </div>
+            
+            <div class="nav">
+                <a href="/public" class="active">Public</a>
+                <a href="/admin">Admin</a>
+            </div>
         </div>
         
-        <div class="nav">
-            <a href="/public" class="active">Public</a>
-            <a href="/admin">Admin</a>
-        </div>
+        <!-- Left Sidebar (Desktop Only) -->
+        <aside class="left-sidebar">
+            <div class="sidebar-card">
+                <h3>📊 Quick Stats</h3>
+                <div class="quick-stat">
+                    <span class="quick-stat-label">Status</span>
+                    <span class="quick-stat-value" id="sidebar-status">
+                        <span th:class="${status.online} ? 'status-indicator status-online' : 'status-indicator status-offline'"></span>
+                        <span th:text="${status.online} ? 'Online' : 'Offline'">Online</span>
+                    </span>
+                </div>
+                <div class="quick-stat">
+                    <span class="quick-stat-label">Players</span>
+                    <span class="quick-stat-value" id="sidebar-players">0/20</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="quick-stat-label">Memory</span>
+                    <span class="quick-stat-value" id="sidebar-memory">
+                        <span th:text="${#numbers.formatDecimal(status.resourceUsage.memoryUsedPercent, 1, 1)} + '%'">0.0%</span>
+                    </span>
+                </div>
+                <div class="quick-stat">
+                    <span class="quick-stat-label">TPS</span>
+                    <span class="quick-stat-value" id="sidebar-tps" th:text="${status.resourceUsage.tps}">N/A</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-card">
+                <h3>🔗 Quick Links</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <a th:if="${dynmapUrl != null && !dynmapUrl.isEmpty()}" 
+                       th:href="${dynmapUrl}" 
+                       class="btn btn-primary" 
+                       target="_blank"
+                       style="text-align: center;">
+                        🗺️ Dynmap
+                    </a>
+                    <a th:if="${bluemapUrl != null && !bluemapUrl.isEmpty()}" 
+                       th:href="${bluemapUrl}" 
+                       class="btn btn-primary" 
+                       target="_blank"
+                       style="text-align: center;">
+                        🌐 BlueMap
+                    </a>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
         
         <div class="card">
             <h2>Server Status</h2>
@@ -301,7 +449,11 @@
             </div>
             <div class="info-row">
                 <span class="info-label">Last Updated</span>
-                <span class="info-value" th:text="${lastFetchTime != null ? #temporals.format(lastFetchTime, 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">N/A</span>
+                <span class="info-value">
+                    <span th:text="${lastFetchTime != null ? #temporals.format(lastFetchTime, 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">N/A</span>
+                    <br>
+                    <span class="relative-time" id="relativeTime">Calculating...</span>
+                </span>
             </div>
             <div class="info-row">
                 <span class="info-label">MOTD</span>
@@ -388,22 +540,18 @@
         </div>
         
         <div class="card">
-            <h2>Data Retrieval History</h2>
-            <p style="color: #6b7280; margin-bottom: 15px;">Last 10 server status retrievals</p>
+            <h2>Data Visualization</h2>
+            <p style="color: #6b7280; margin-bottom: 15px;">Historical server metrics from the last 10 data retrievals</p>
             
             <div style="margin-bottom: 30px;">
                 <h3 class="chart-section-title">Player Activity Over Time</h3>
                 <div class="chart-container">
-                    <div id="playerChart" class="chart-bars"></div>
-                    <div class="chart-legend">
-                        <div class="chart-legend-item">
-                            <div class="chart-legend-color" style="background: linear-gradient(to top, #22c55e, #86efac);"></div>
-                            <span>Online</span>
-                        </div>
-                        <div class="chart-legend-item">
-                            <div class="chart-legend-color" style="background: linear-gradient(to top, #ef4444, #fca5a5);"></div>
-                            <span>Offline</span>
-                        </div>
+                    <canvas id="playerChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <div class="chart-legend-item">
+                        <div class="chart-legend-color" style="background: #22c55e;"></div>
+                        <span>Players Online</span>
                     </div>
                 </div>
             </div>
@@ -411,123 +559,298 @@
             <div>
                 <h3 class="chart-section-title">Memory Usage Over Time</h3>
                 <div class="chart-container">
-                    <div id="memoryChart" class="chart-bars"></div>
-                    <div class="chart-legend">
-                        <div class="chart-legend-item">
-                            <div class="chart-legend-color" style="background: linear-gradient(to top, #3b82f6, #93c5fd);"></div>
-                            <span>Memory Usage %</span>
-                        </div>
+                    <canvas id="memoryChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <div class="chart-legend-item">
+                        <div class="chart-legend-color" style="background: #3b82f6;"></div>
+                        <span>Memory Usage %</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <h3 class="chart-section-title">TPS (Ticks Per Second) Over Time</h3>
+                <div class="chart-container">
+                    <canvas id="tpsChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <div class="chart-legend-item">
+                        <div class="chart-legend-color" style="background: #f59e0b;"></div>
+                        <span>TPS</span>
                     </div>
                 </div>
             </div>
         </div>
+        
+        </main>
+        
+        <!-- Right Sidebar (Desktop Only) -->
+        <aside class="right-sidebar">
+            <div class="sidebar-card">
+                <h3>⏱️ Recent Activity</h3>
+                <div id="recentActivity">
+                    <div class="activity-item">
+                        <div class="activity-time">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
     </div>
     
     <script th:inline="javascript">
+        // Utility function to convert timestamp to relative time
+        function getRelativeTime(timestamp) {
+            if (!timestamp) return 'N/A';
+            
+            const now = new Date();
+            const past = new Date(timestamp);
+            const diffMs = now - past;
+            const diffSeconds = Math.floor(diffMs / 1000);
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            if (diffSeconds < 60) return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+            if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+        }
+        
+        // Update relative time display
+        function updateRelativeTime() {
+            const lastFetchTime = /*[[${lastFetchTime}]]*/ null;
+            if (lastFetchTime) {
+                const relativeTimeElement = document.getElementById('relativeTime');
+                if (relativeTimeElement) {
+                    relativeTimeElement.textContent = getRelativeTime(lastFetchTime);
+                }
+            }
+        }
+        
+        // Call immediately and then every 10 seconds
+        updateRelativeTime();
+        setInterval(updateRelativeTime, 10000);
+        
+        // Simple line chart drawing function
+        function drawLineChart(canvas, data, options = {}) {
+            const ctx = canvas.getContext('2d');
+            const {
+                color = '#22c55e',
+                lineWidth = 2,
+                pointRadius = 4,
+                padding = 40,
+                showGrid = true,
+                yMin = null,
+                yMax = null
+            } = options;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const chartWidth = width - padding * 2;
+            const chartHeight = height - padding * 2;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            if (data.length === 0) {
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data available', width / 2, height / 2);
+                return;
+            }
+            
+            // Find min and max values
+            const values = data.map(d => d.value);
+            const minValue = yMin !== null ? yMin : Math.min(...values, 0);
+            const maxValue = yMax !== null ? yMax : Math.max(...values, 1);
+            const valueRange = maxValue - minValue || 1;
+            
+            // Draw grid
+            if (showGrid) {
+                ctx.strokeStyle = '#e5e7eb';
+                ctx.lineWidth = 1;
+                
+                // Horizontal grid lines
+                for (let i = 0; i <= 4; i++) {
+                    const y = padding + (chartHeight / 4) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(width - padding, y);
+                    ctx.stroke();
+                    
+                    // Y-axis labels
+                    const value = maxValue - (valueRange / 4) * i;
+                    ctx.fillStyle = '#6b7280';
+                    ctx.font = '12px sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(value.toFixed(1), padding - 10, y + 4);
+                }
+            }
+            
+            // Draw line
+            if (data.length > 1) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.beginPath();
+                
+                data.forEach((point, index) => {
+                    const x = padding + (chartWidth / (data.length - 1)) * index;
+                    const y = padding + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                
+                ctx.stroke();
+            }
+            
+            // Draw points
+            data.forEach((point, index) => {
+                const x = padding + (chartWidth / (Math.max(data.length - 1, 1))) * index;
+                const y = padding + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // X-axis labels (time)
+                if (point.label) {
+                    ctx.fillStyle = '#6b7280';
+                    ctx.font = '10px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.save();
+                    ctx.translate(x, height - padding + 15);
+                    ctx.rotate(-Math.PI / 4);
+                    ctx.fillText(point.label, 0, 0);
+                    ctx.restore();
+                }
+            });
+        }
+        
         async function loadHistory() {
             try {
                 const response = await fetch('/api/history');
                 const data = await response.json();
                 const history = data.history;
                 
-                const playerChartContainer = document.getElementById('playerChart');
-                const memoryChartContainer = document.getElementById('memoryChart');
-                playerChartContainer.innerHTML = '';
-                memoryChartContainer.innerHTML = '';
-                
                 if (history.length === 0) {
-                    playerChartContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #9ca3af;">No data yet</div>';
-                    memoryChartContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #9ca3af;">No data yet</div>';
                     return;
                 }
                 
                 // Reverse to show oldest to newest
                 const reversedHistory = [...history].reverse();
                 
-                // Find max player count for scaling
-                const maxPlayers = Math.max(...reversedHistory.map(r => r.playerCount), 1);
+                // Prepare data for player chart
+                const playerData = reversedHistory.map(record => ({
+                    value: record.playerCount,
+                    label: new Date(record.timestamp).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    })
+                }));
                 
-                // Render Player Activity Chart
-                reversedHistory.forEach(record => {
-                    const barWrapper = document.createElement('div');
-                    barWrapper.className = 'chart-bar-wrapper';
-                    
-                    const value = document.createElement('div');
-                    value.className = 'chart-value';
-                    value.textContent = record.playerCount;
-                    
-                    const bar = document.createElement('div');
-                    bar.className = 'chart-bar ' + (record.success ? 'success' : 'error');
-                    const height = (record.playerCount / maxPlayers) * 100;
-                    bar.style.height = Math.max(height, 5) + '%';
-                    
-                    // Tooltip with player info
-                    const tooltipLines = [
-                        `Players: ${record.playerCount}`,
-                        `Status: ${record.success ? 'Online' : 'Offline'}`,
-                        `Time: ${new Date(record.timestamp).toLocaleTimeString()}`
-                    ];
-                    
-                    bar.title = tooltipLines.join('\n');
-                    
-                    const label = document.createElement('div');
-                    label.className = 'chart-label';
-                    const date = new Date(record.timestamp);
-                    label.textContent = date.toLocaleTimeString();
-                    
-                    barWrapper.appendChild(value);
-                    barWrapper.appendChild(bar);
-                    barWrapper.appendChild(label);
-                    playerChartContainer.appendChild(barWrapper);
-                });
+                // Prepare data for memory chart
+                const memoryData = reversedHistory.map(record => ({
+                    value: record.resourceUsage ? record.resourceUsage.memoryUsedPercent : 0,
+                    label: new Date(record.timestamp).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    })
+                }));
                 
-                // Render Memory Usage Chart
-                reversedHistory.forEach(record => {
-                    const barWrapper = document.createElement('div');
-                    barWrapper.className = 'chart-bar-wrapper';
+                // Prepare data for TPS chart
+                const tpsData = reversedHistory.map(record => {
+                    const tpsStr = record.resourceUsage ? record.resourceUsage.tps : 'N/A';
+                    let tpsValue = 0;
                     
-                    const memoryPercent = record.resourceUsage ? record.resourceUsage.memoryUsedPercent : 0;
-                    
-                    const value = document.createElement('div');
-                    value.className = 'chart-value';
-                    value.textContent = memoryPercent.toFixed(1) + '%';
-                    
-                    const bar = document.createElement('div');
-                    bar.className = 'chart-bar memory';
-                    const height = memoryPercent;
-                    bar.style.height = Math.max(height, 5) + '%';
-                    
-                    // Tooltip with memory info
-                    const tooltipLines = [
-                        `Memory Usage: ${memoryPercent.toFixed(1)}%`,
-                        `Time: ${new Date(record.timestamp).toLocaleTimeString()}`
-                    ];
-                    
-                    if (record.resourceUsage) {
-                        tooltipLines.push(`Used: ${record.resourceUsage.memoryUsed}`);
-                        tooltipLines.push(`Max: ${record.resourceUsage.memoryMax}`);
-                        tooltipLines.push(`TPS: ${record.resourceUsage.tps}`);
+                    // Parse TPS value (e.g., "20.0, 20.0, 20.0" -> get first value)
+                    if (tpsStr && tpsStr !== 'N/A') {
+                        const match = tpsStr.match(/[\d.]+/);
+                        if (match) {
+                            tpsValue = parseFloat(match[0]);
+                        }
                     }
                     
-                    bar.title = tooltipLines.join('\n');
-                    
-                    const label = document.createElement('div');
-                    label.className = 'chart-label';
-                    const date = new Date(record.timestamp);
-                    label.textContent = date.toLocaleTimeString();
-                    
-                    barWrapper.appendChild(value);
-                    barWrapper.appendChild(bar);
-                    barWrapper.appendChild(label);
-                    memoryChartContainer.appendChild(barWrapper);
+                    return {
+                        value: tpsValue,
+                        label: new Date(record.timestamp).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        })
+                    };
                 });
+                
+                // Draw charts
+                const playerCanvas = document.getElementById('playerChart');
+                const memoryCanvas = document.getElementById('memoryChart');
+                const tpsCanvas = document.getElementById('tpsChart');
+                
+                // Set canvas dimensions
+                [playerCanvas, memoryCanvas, tpsCanvas].forEach(canvas => {
+                    const container = canvas.parentElement;
+                    canvas.width = container.clientWidth || 800;
+                    canvas.height = 250;
+                });
+                
+                drawLineChart(playerCanvas, playerData, {
+                    color: '#22c55e',
+                    yMin: 0
+                });
+                
+                drawLineChart(memoryCanvas, memoryData, {
+                    color: '#3b82f6',
+                    yMin: 0,
+                    yMax: 100
+                });
+                
+                drawLineChart(tpsCanvas, tpsData, {
+                    color: '#f59e0b',
+                    yMin: 0,
+                    yMax: 20
+                });
+                
+                // Update recent activity sidebar
+                updateRecentActivity(reversedHistory);
+                
             } catch (error) {
                 console.error('Failed to load history:', error);
-                document.getElementById('playerChart').innerHTML = 
-                    '<div style="text-align: center; padding: 40px; color: #ef4444;">Failed to load history</div>';
-                document.getElementById('memoryChart').innerHTML = 
-                    '<div style="text-align: center; padding: 40px; color: #ef4444;">Failed to load history</div>';
             }
+        }
+        
+        function updateRecentActivity(history) {
+            const container = document.getElementById('recentActivity');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Show last 5 activities
+            history.slice(-5).reverse().forEach(record => {
+                const item = document.createElement('div');
+                item.className = 'activity-item';
+                
+                const time = document.createElement('div');
+                time.className = 'activity-time';
+                time.textContent = getRelativeTime(record.timestamp);
+                
+                const text = document.createElement('div');
+                text.className = 'activity-text';
+                
+                if (record.success) {
+                    text.textContent = `✅ Server online - ${record.playerCount} player${record.playerCount !== 1 ? 's' : ''}`;
+                } else {
+                    text.textContent = '❌ Server offline';
+                }
+                
+                item.appendChild(time);
+                item.appendChild(text);
+                container.appendChild(item);
+            });
         }
         
         // Load Activity Tracker data
