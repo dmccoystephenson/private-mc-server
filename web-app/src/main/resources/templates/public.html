@@ -696,7 +696,8 @@
                 ctx.beginPath();
                 
                 data.forEach((point, index) => {
-                    const x = padding + (chartWidth / (data.length - 1)) * index;
+                    const divisor = Math.max(data.length - 1, 1);
+                    const x = padding + (chartWidth / divisor) * index;
                     const y = padding + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
                     
                     if (index === 0) {
@@ -711,7 +712,8 @@
             
             // Draw points
             data.forEach((point, index) => {
-                const x = padding + (chartWidth / (Math.max(data.length - 1, 1))) * index;
+                const divisor = Math.max(data.length - 1, 1);
+                const x = padding + (chartWidth / divisor) * index;
                 const y = padding + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
                 
                 ctx.fillStyle = color;
@@ -771,9 +773,9 @@
                     
                     // Parse TPS value (e.g., "20.0, 20.0, 20.0" -> get first value)
                     if (tpsStr && tpsStr !== 'N/A') {
-                        const match = tpsStr.match(/[\d.]+/);
+                        const match = tpsStr.match(/^(\d+(?:\.\d+)?)(?:,|$)/);
                         if (match) {
-                            tpsValue = parseFloat(match[0]);
+                            tpsValue = parseFloat(match[1]);
                         }
                     }
                     
@@ -791,12 +793,22 @@
                 const memoryCanvas = document.getElementById('memoryChart');
                 const tpsCanvas = document.getElementById('tpsChart');
                 
-                // Set canvas dimensions
-                [playerCanvas, memoryCanvas, tpsCanvas].forEach(canvas => {
-                    const container = canvas.parentElement;
-                    canvas.width = container.clientWidth || 800;
-                    canvas.height = 250;
-                });
+                // Set canvas dimensions once to avoid layout thrashing
+                function setCanvasDimensions() {
+                    [playerCanvas, memoryCanvas, tpsCanvas].forEach(canvas => {
+                        const container = canvas.parentElement;
+                        const newWidth = container.clientWidth || 800;
+                        const newHeight = 250;
+                        
+                        // Only update if dimensions changed
+                        if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                            canvas.width = newWidth;
+                            canvas.height = newHeight;
+                        }
+                    });
+                }
+                
+                setCanvasDimensions();
                 
                 drawLineChart(playerCanvas, playerData, {
                     color: '#22c55e',
