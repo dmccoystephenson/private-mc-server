@@ -15,6 +15,8 @@ services:
     volumes:
       - mcserver:/mcserver
       - ./deposit-box:/deposit-box
+    depends_on:
+      - alert-manager
     environment:
       - MINECRAFT_VERSION=${MINECRAFT_VERSION}
       - OPERATOR_UUID=${OPERATOR_UUID}
@@ -86,6 +88,8 @@ services:
       - ./backup.sh:/backup.sh:ro
       - ./.env:/.env:ro
       - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - alert-manager
     environment:
       - BACKUP_SCRIPT_PATH=/backup.sh
       - BACKUP_DIRECTORY=/backups
