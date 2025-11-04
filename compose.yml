@@ -29,6 +29,12 @@ services:
       - ONLINE_MODE=${ONLINE_MODE}
       - JAVA_OPTS=${JAVA_OPTS}
       - RCON_PASSWORD=${RCON_PASSWORD:-minecraft}
+      # Alert configuration
+      - ALERT_MANAGER_URL=${ALERT_MANAGER_URL:-}
+      - ALERTS_SERVER_START=${ALERTS_SERVER_START:-true}
+      - ALERTS_SERVER_STOP=${ALERTS_SERVER_STOP:-true}
+      - ALERTS_SERVER_CRASH=${ALERTS_SERVER_CRASH:-true}
+      - ALERTS_CONFIG_WARNING=${ALERTS_CONFIG_WARNING:-false}
 
   webapp:
     build:
@@ -87,6 +93,10 @@ services:
       - BACKUP_MAX_SIZE_MB=${BACKUP_MAX_SIZE_MB:-10240}
       - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 0 2 * * ?}
       - VOLUME_NAME=${VOLUME_NAME:-mcserver}
+      # Alert configuration
+      - ALERT_MANAGER_URL=${ALERT_MANAGER_URL:-}
+      - ALERTS_BACKUP_SUCCESS=${ALERTS_BACKUP_SUCCESS:-true}
+      - ALERTS_BACKUP_FAILURE=${ALERTS_BACKUP_FAILURE:-true}
 
   alert-manager:
     build:
