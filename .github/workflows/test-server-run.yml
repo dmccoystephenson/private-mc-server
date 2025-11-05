@@ -33,18 +33,21 @@ jobs:
         sed -i 's/-Xmx3G -Xms2G/-Xmx1G -Xms512M/g' .env
         echo "✓ Environment file created"
         
-    - name: Build Minecraft server image
+    - name: Build required images
       run: |
-        echo "🐳 Building Minecraft server Docker image..."
-        echo "This will take several minutes as it downloads and compiles Spigot..."
+        echo "🐳 Building Docker images..."
+        echo "Building alert-manager..."
+        docker compose build alert-manager
+        echo "✓ Alert manager built"
+        echo "Building Minecraft server (this will take several minutes as it downloads and compiles Spigot)..."
         docker compose build mcserver
         echo "✓ Server image built successfully"
         
-    - name: Start Minecraft server
+    - name: Start services
       run: |
-        echo "🚀 Starting Minecraft server..."
-        docker compose up -d mcserver
-        echo "✓ Server container started"
+        echo "🚀 Starting services..."
+        docker compose up -d alert-manager mcserver
+        echo "✓ Services started"
         
     - name: Wait for server initialization
       run: |
