@@ -116,23 +116,19 @@ public class DiscordAlertService {
      * @param payload Discord webhook payload DTO
      */
     private void sendWebhook(DiscordWebhookPayload payload) throws AlertException {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<DiscordWebhookPayload> entity = new HttpEntity<>(payload, headers);
-            ResponseEntity<String> response = restTemplate.exchange(
-                webhookUrl,
-                HttpMethod.POST,
-                entity,
-                String.class
-            );
+        HttpEntity<DiscordWebhookPayload> entity = new HttpEntity<>(payload, headers);
+        ResponseEntity<String> response = restTemplate.exchange(
+            webhookUrl,
+            HttpMethod.POST,
+            entity,
+            String.class
+        );
 
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new AlertException("Discord webhook returned non-success status: " + response.getStatusCode());
-            }
-        } catch (Exception e) {
-            throw new AlertException("Failed to send Discord webhook", e);
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new AlertException("Discord webhook returned non-success status: " + response.getStatusCode());
         }
     }
 }
