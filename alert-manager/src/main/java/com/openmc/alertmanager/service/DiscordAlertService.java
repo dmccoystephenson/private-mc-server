@@ -1,9 +1,11 @@
 package com.openmc.alertmanager.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openmc.alertmanager.exception.AlertException;
 import com.openmc.alertmanager.model.Alert;
 import com.openmc.alertmanager.model.AlertLevel;
+import com.openmc.alertmanager.model.discord.DiscordEmbed;
+import com.openmc.alertmanager.model.discord.DiscordEmbedFooter;
+import com.openmc.alertmanager.model.discord.DiscordWebhookPayload;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -12,8 +14,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collections;
 
 /**
  * Service for sending alerts to Discord via webhooks
@@ -35,11 +36,9 @@ public class DiscordAlertService {
     private boolean enabled;
 
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
 
-    public DiscordAlertService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public DiscordAlertService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
-        this.objectMapper = objectMapper;
     }
 
     /**
@@ -63,7 +62,7 @@ public class DiscordAlertService {
                  alert.getTitle(), alert.getLevel(), alert.getSource());
 
         try {
-            String payload = buildDiscordPayload(alert);
+            DiscordWebhookPayload payload = buildDiscordPayload(alert);
             sendWebhook(payload);
             log.info("Discord alert sent successfully: {}", alert.getTitle());
         } catch (Exception e) {
@@ -73,30 +72,27 @@ public class DiscordAlertService {
     }
 
     /**
-     * Build the Discord webhook payload in JSON format
+     * Build the Discord webhook payload using DTOs
      *
      * @param alert The alert to convert to Discord format
-     * @return JSON payload string
+     * @return Discord webhook payload DTO
      */
-    private String buildDiscordPayload(Alert alert) throws AlertException {
-        try {
-            Map<String, Object> embed = new HashMap<>();
-            embed.put("title", alert.getTitle());
-            embed.put("description", alert.getMessage());
-            embed.put("color", getColorForLevel(alert.getLevel()));
-            embed.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
-            
-            Map<String, Object> footer = new HashMap<>();
-            footer.put("text", "Source: " + (alert.getSource() != null ? alert.getSource() : "unknown"));
-            embed.put("footer", footer);
+    private DiscordWebhookPayload buildDiscordPayload(Alert alert) {
+        DiscordEmbedFooter footer = DiscordEmbedFooter.builder()
+            .text("Source: " + (alert.getSource() != null ? alert.getSource() : "unknown"))
+            .build();
 
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("embeds", new Object[]{embed});
+        DiscordEmbed embed = DiscordEmbed.builder()
+            .title(alert.getTitle())
+            .description(alert.getMessage())
+            .color(getColorForLevel(alert.getLevel()))
+            .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME))
+            .footer(footer)
+            .build();
 
-            return objectMapper.writeValueAsString(payload);
-        } catch (Exception e) {
-            throw new AlertException("Failed to serialize Discord payload", e);
-        }
+        return DiscordWebhookPayload.builder()
+            .embeds(Collections.singletonList(embed))
+            .build();
     }
 
     /**
@@ -117,14 +113,14 @@ public class DiscordAlertService {
     /**
      * Send webhook request to Discord
      *
-     * @param payload JSON payload
+     * @param payload Discord webhook payload DTO
      */
-    private void sendWebhook(String payload) throws AlertException {
+    private void sendWebhook(DiscordWebhookPayload payload) throws AlertException {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<String> entity = new HttpEntity<>(payload, headers);
+            HttpEntity<DiscordWebhookPayload> entity = new HttpEntity<>(payload, headers);
             ResponseEntity<String> response = restTemplate.exchange(
                 webhookUrl,
                 HttpMethod.POST,
