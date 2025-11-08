@@ -16,7 +16,8 @@ services:
       - mcserver:/mcserver
       - ./deposit-box:/deposit-box
     depends_on:
-      - alert-manager
+      alert-manager:
+        condition: service_healthy
     environment:
       - MINECRAFT_VERSION=${MINECRAFT_VERSION}
       - OPERATOR_UUID=${OPERATOR_UUID}
@@ -89,7 +90,8 @@ services:
       - ./.env:/.env:ro
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - alert-manager
+      alert-manager:
+        condition: service_healthy
     environment:
       - BACKUP_SCRIPT_PATH=/backup.sh
       - BACKUP_DIRECTORY=/backups
@@ -110,6 +112,12 @@ services:
     container_name: ${ALERT_CONTAINER_NAME:-open-mc-alert-manager}
     ports:
       - "${ALERT_PORT:-8090}:8090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     environment:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
       - DISCORD_ENABLED=${DISCORD_ENABLED:-false}

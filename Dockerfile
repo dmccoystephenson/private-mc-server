@@ -7,7 +7,6 @@ RUN apt-get update && \
         wget \
         git \
         openjdk-21-jdk \
-        openjdk-21-jre \
         curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

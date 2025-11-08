@@ -187,27 +187,7 @@ See [alert-manager/README.md](alert-manager/README.md) for detailed configuratio
 
 **Running Parallel Development Servers**: To run multiple servers simultaneously (e.g., for testing different configurations), create separate `.env` files with different values for these settings and use `docker compose --env-file <env-file>` to start each server.
 
-Example for a second server:
-```bash
-# Create a separate env file for the second server
-cp sample.env .env.dev2
-# Edit .env.dev2 and change:
-# - CONTAINER_NAME=open-mc-server-dev2
-# - HOST_PORT=25566
-# - HOST_RCON_PORT=25576
-# - HOST_BLUEMAP_PORT=8101
-# - VOLUME_NAME=mcserver-dev2
-# - WEB_CONTAINER_NAME=open-mc-webapp-dev2
-# - NGINX_CONTAINER_NAME=open-mc-nginx-dev2
-# - BACKUP_CONTAINER_NAME=open-mc-backup-manager-dev2
-# - ALERT_CONTAINER_NAME=open-mc-alert-manager-dev2
-# - ALERT_PORT=8091
-# - WEB_HTTP_PORT=8081
-# - WEB_HTTPS_PORT=8444
-
-# Start the second server
-docker compose --env-file .env.dev2 up -d --build
-```
+Example for a second server: Create a separate `.env` file with different values for `CONTAINER_NAME`, `HOST_PORT`, `HOST_RCON_PORT`, `HOST_BLUEMAP_PORT`, `VOLUME_NAME`, `WEB_CONTAINER_NAME`, `NGINX_CONTAINER_NAME`, `BACKUP_CONTAINER_NAME`, `ALERT_CONTAINER_NAME`, `ALERT_PORT`, `WEB_HTTP_PORT`, and `WEB_HTTPS_PORT`, then start with `docker compose --env-file .env.dev2 up -d --build`.
 
 ## Management
 
