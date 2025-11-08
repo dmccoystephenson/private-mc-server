@@ -30,13 +30,9 @@ To enable Discord notifications:
    - Click "New Webhook"
    - Choose a channel and copy the webhook URL
    
-2. Add the webhook URL to your `.env` file:
-   ```bash
-   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_URL
-   DISCORD_ENABLED=true
-   ```
+2. Add the webhook URL to your `.env` file with `DISCORD_WEBHOOK_URL` and set `DISCORD_ENABLED=true`
 
-3. Restart the infrastructure: `./up.sh`
+3. Restart the infrastructure
 
 ## Alert Levels
 
@@ -55,216 +51,43 @@ The alert manager supports four severity levels:
 
 Send an alert notification.
 
-Request body:
-```json
-{
-  "title": "Backup Completed",
-  "message": "Server backup completed successfully at 2 AM",
-  "level": "INFO",
-  "source": "backup-manager"
-}
-```
+Request body: JSON object with title, message, level, and source fields.
 
-Response:
-```
-Alert sent successfully
-```
+Response: Success message confirming alert was sent.
 
 ### Health Check
 
 **GET** `/api/alerts/health`
 
-Check if the alert manager is running.
+Check if the alert manager is running and returns a status message.
 
-Response:
-```
-Alert Manager is running
-```
+## Usage
 
-## Usage Examples
-
-### From Command Line (curl)
-
-```bash
-curl -X POST http://alert-manager:8090/api/alerts \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Server Started",
-    "message": "Minecraft server has started successfully",
-    "level": "INFO",
-    "source": "mcserver"
-  }'
-```
-
-### From Java/Spring Boot
-
-```java
-@Service
-public class MyService {
-    private final RestTemplate restTemplate;
-    
-    public void sendAlert(String title, String message, String level) {
-        Map<String, String> alert = new HashMap<>();
-        alert.put("title", title);
-        alert.put("message", message);
-        alert.put("level", level);
-        alert.put("source", "my-module");
-        
-        restTemplate.postForObject(
-            "http://alert-manager:8090/api/alerts",
-            alert,
-            String.class
-        );
-    }
-}
-```
-
-### From Shell Script
-
-```bash
-#!/bin/bash
-send_alert() {
-    local title="$1"
-    local message="$2"
-    local level="${3:-INFO}"
-    
-    curl -X POST http://alert-manager:8090/api/alerts \
-      -H "Content-Type: application/json" \
-      -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"script\"}"
-}
-
-send_alert "Backup Failed" "Backup process encountered an error" "ERROR"
-```
+The alert-manager provides a simple REST API that can be called from any module using standard HTTP POST requests. Other modules in the infrastructure (backup-manager, webapp, etc.) can send alerts by making HTTP POST requests to the `/api/alerts` endpoint with JSON payloads containing the alert details.
 
 ## Building
 
-Build the alert-manager application:
-
-```bash
-cd alert-manager
-./build.sh
-```
-
-Or manually:
-
-```bash
-./gradlew clean build
-```
+Build the alert-manager application using the provided build script or Gradle directly.
 
 ## Testing
 
-Run tests:
-
-```bash
-./gradlew test
-```
+Run tests using Gradle's test task.
 
 ### Integration Testing
 
-An example integration script is provided to test the alert-manager from the host machine:
-
-```bash
-./example-integration.sh
-```
-
-This script sends alerts to `http://localhost:8090/api/alerts` by default. To use it from within another container, set the `ALERT_MANAGER_URL` environment variable:
-
-```bash
-# From host machine (default)
-./example-integration.sh
-
-# From within a container
-ALERT_MANAGER_URL=http://alert-manager:8090/api/alerts ./example-integration.sh
-```
-
-The script demonstrates how to send alerts from other modules and verifies that the alert-manager API is working correctly.
+An example integration script is provided to test the alert-manager from the host machine. The script demonstrates how to send alerts from other modules and verifies that the alert-manager API is working correctly.
 
 ## Running
 
-The alert-manager is automatically started with the rest of the infrastructure:
-
-```bash
-cd ..
-./up.sh
-```
+The alert-manager is automatically started with the rest of the infrastructure using the up.sh script.
 
 ### Viewing Logs
 
-To view alert-manager logs:
-
-```bash
-docker logs -f open-mc-alert-manager
-```
-
-Or use your custom container name:
-
-```bash
-docker logs -f ${ALERT_CONTAINER_NAME}
-```
+View alert-manager logs using Docker's log command with the container name (default: open-mc-alert-manager).
 
 ## Integration with Other Modules
 
-The alert-manager is designed to be used by other modules in the infrastructure:
-
-### Backup Manager Integration
-
-The backup-manager can send alerts when backups complete or fail:
-
-```java
-@Service
-public class BackupService {
-    @Autowired
-    private RestTemplate restTemplate;
-    
-    public void performBackup() {
-        try {
-            // ... backup logic ...
-            sendAlert("Backup Completed", "Server backup completed successfully", "INFO");
-        } catch (Exception e) {
-            sendAlert("Backup Failed", "Error: " + e.getMessage(), "ERROR");
-        }
-    }
-    
-    private void sendAlert(String title, String message, String level) {
-        Alert alert = Alert.builder()
-            .title(title)
-            .message(message)
-            .level(AlertLevel.valueOf(level))
-            .source("backup-manager")
-            .build();
-        
-        restTemplate.postForObject(
-            "http://alert-manager:8090/api/alerts",
-            alert,
-            String.class
-        );
-    }
-}
-```
-
-### Web Application Integration
-
-The web application can send alerts for server events:
-
-```java
-@Service
-public class ServerMonitorService {
-    @Autowired
-    private RestTemplate restTemplate;
-    
-    public void onServerStart() {
-        sendAlert("Server Started", 
-                 "Minecraft server has started successfully", 
-                 "INFO");
-    }
-    
-    public void onServerCrash(String error) {
-        sendAlert("Server Crashed", 
-                 "Server crashed with error: " + error, 
-                 "CRITICAL");
-    }
-}
-```
+The alert-manager is designed to be used by other modules in the infrastructure. Modules can integrate by making HTTP POST requests to the alert-manager API endpoint with appropriate alert details including title, message, level, and source identification.
 
 ## Future Enhancements
 
@@ -326,6 +149,6 @@ The alert-manager is designed to be extensible. Future versions may include:
 ### Can't Connect to Alert Manager API
 
 1. Verify the container is running and healthy
-2. Check the port mapping in `docker-compose.yml`
-3. Test with curl: `curl http://alert-manager:8090/api/alerts/health`
+2. Check the port mapping in compose.yml
+3. Test the health endpoint using an HTTP client
 4. Check network connectivity between containers
