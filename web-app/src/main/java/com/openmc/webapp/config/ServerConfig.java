@@ -19,6 +19,10 @@ public class ServerConfig {
     private long refreshIntervalMs = 1800000; // Default: 30 minutes
     private String activityTrackerUrl = "";
     private boolean activityTrackerEnabled = false;
+    private String dashboardTitle = "Minecraft Server Dashboard";
+    private String dashboardSubtitle = "Server Management & Information";
+    private String dashboardPrimaryColor = "#667eea";
+    private String dashboardSecondaryColor = "#764ba2";
     
     // Getters and setters
     public String getHost() {
@@ -115,5 +119,37 @@ public class ServerConfig {
     
     public void setActivityTrackerEnabled(boolean activityTrackerEnabled) {
         this.activityTrackerEnabled = activityTrackerEnabled;
+    }
+    
+    public String getDashboardTitle() {
+        return dashboardTitle;
+    }
+    
+    public void setDashboardTitle(String dashboardTitle) {
+        this.dashboardTitle = dashboardTitle;
+    }
+    
+    public String getDashboardSubtitle() {
+        return dashboardSubtitle;
+    }
+    
+    public void setDashboardSubtitle(String dashboardSubtitle) {
+        this.dashboardSubtitle = dashboardSubtitle;
+    }
+    
+    public String getDashboardPrimaryColor() {
+        return dashboardPrimaryColor;
+    }
+    
+    public void setDashboardPrimaryColor(String dashboardPrimaryColor) {
+        this.dashboardPrimaryColor = dashboardPrimaryColor;
+    }
+    
+    public String getDashboardSecondaryColor() {
+        return dashboardSecondaryColor;
+    }
+    
+    public void setDashboardSecondaryColor(String dashboardSecondaryColor) {
+        this.dashboardSecondaryColor = dashboardSecondaryColor;
     }
 }
