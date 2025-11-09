@@ -10,26 +10,71 @@ log() {
     echo "[SERVER-SETUP] $message"
 }
 
+# Function: Send alert to alert-manager
+send_alert() {
+    local title="$1"
+    local message="$2"
+    local level="${3:-INFO}"
+    local source="server-setup"
+    local alert_toggle="${4:-}"
+    
+    # Check if this type of alert is enabled (if toggle variable is provided)
+    if [ -n "$alert_toggle" ]; then
+        local toggle_value="${!alert_toggle:-true}"
+        if [ "$toggle_value" != "true" ]; then
+            return 0
+        fi
+    fi
+    
+    # Determine the alert manager URL based on environment
+    local alert_url
+    if [ -n "${ALERT_MANAGER_URL:-}" ]; then
+        alert_url="$ALERT_MANAGER_URL"
+    elif [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+        alert_url="http://alert-manager:8090/api/alerts"
+    else
+        alert_url="http://localhost:8090/api/alerts"
+    fi
+    
+    # Try to send alert, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        curl -X POST "$alert_url" \
+          -H "Content-Type: application/json" \
+          --max-time 5 \
+          --connect-timeout 5 \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          >/dev/null 2>&1 || true
+    fi
+}
+
 # Function: Validate required environment variables
 validate_environment() {
     local warnings=false
+    local warning_messages=""
     
     if [ "$OPERATOR_UUID" = "YOUR_UUID_HERE" ] || [ -z "$OPERATOR_UUID" ]; then
         log "WARNING: OPERATOR_UUID is not set properly. Consider setting it to your actual UUID from https://mcuuid.net/"
         log "Server will continue with default operator configuration."
         warnings=true
+        warning_messages="OPERATOR_UUID not configured"
     fi
     
     if [ "$OPERATOR_NAME" = "YOUR_USERNAME_HERE" ] || [ -z "$OPERATOR_NAME" ]; then
         log "WARNING: OPERATOR_NAME is not set properly. Consider setting it to your actual Minecraft username."
         log "Server will continue with default operator configuration."
         warnings=true
+        if [ -n "$warning_messages" ]; then
+            warning_messages="$warning_messages, OPERATOR_NAME not configured"
+        else
+            warning_messages="OPERATOR_NAME not configured"
+        fi
     fi
     
     if [ "$warnings" = false ]; then
         log "Environment validation passed."
     else
         log "Server starting with configuration warnings - please check your .env file."
+        send_alert "Server Configuration Warning" "Server started with configuration issues: $warning_messages" "WARNING" "ALERTS_CONFIG_WARNING"
     fi
 }
 

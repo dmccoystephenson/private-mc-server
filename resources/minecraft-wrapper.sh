@@ -8,6 +8,54 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WRAPPER] $1"
 }
 
+# Function: Send alert to alert-manager
+send_alert() {
+    local title="$1"
+    local message="$2"
+    local level="${3:-INFO}"
+    local source="minecraft-server"
+    local alert_toggle="${4:-}"
+    
+    # Check if this type of alert is enabled (if toggle variable is provided)
+    if [ -n "$alert_toggle" ]; then
+        local toggle_value="${!alert_toggle:-true}"
+        if [ "$toggle_value" != "true" ]; then
+            log "Alert skipped (disabled via $alert_toggle): $title"
+            return 0
+        fi
+    fi
+    
+    local alert_url="${ALERT_MANAGER_URL:-http://alert-manager:8090/api/alerts}"
+    
+    # Try to send alert, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        log "Sending alert to $alert_url: $title ($level)"
+        
+        # Capture HTTP response code and any error output
+        local http_code
+        local curl_output
+        curl_output=$(curl -X POST "$alert_url" \
+          -H "Content-Type: application/json" \
+          -w "\n%{http_code}" \
+          --max-time 5 \
+          --connect-timeout 5 \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          2>&1 || echo "CURL_FAILED")
+        
+        http_code=$(echo "$curl_output" | tail -1)
+        
+        if [ "$curl_output" = "CURL_FAILED" ]; then
+            log "Alert failed: curl command failed (connection error or timeout)"
+        elif [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            log "Alert sent successfully (HTTP $http_code)"
+        else
+            log "Alert failed: HTTP $http_code"
+        fi
+    else
+        log "curl not available, skipping alert: $title"
+    fi
+}
+
 # Variables
 SERVER_JAR="$1"
 SERVER_DIR="$2" 
@@ -49,6 +97,9 @@ graceful_shutdown() {
         wait "$PID" 2>/dev/null || true
         
         log "Server shutdown gracefully"
+        
+        # Send alert that server has stopped
+        send_alert "Minecraft Server Stopped" "The Minecraft server has been shut down gracefully." "INFO" "ALERTS_SERVER_STOP"
     else
         log "No server process found or already terminated."
     fi
@@ -102,6 +153,9 @@ PID=$!
 
 log "Minecraft server started with PID: $PID"
 
+# Send alert that server has started
+send_alert "Minecraft Server Started" "The Minecraft server has started successfully." "INFO" "ALERTS_SERVER_START"
+
 # Wait until the server process finishes or a termination signal is received
 wait "$PID"
 EXIT_CODE=$?
@@ -110,4 +164,10 @@ EXIT_CODE=$?
 kill "$FIFO_KEEPER_PID" 2>/dev/null || true
 
 log "Minecraft server process exited with code: $EXIT_CODE"
+
+# Send alert if server crashed (non-zero exit code, not from graceful shutdown)
+if [ $EXIT_CODE -ne 0 ]; then
+    send_alert "Minecraft Server Crashed" "The Minecraft server exited unexpectedly with code $EXIT_CODE. Check logs for details." "ERROR" "ALERTS_SERVER_CRASH"
+fi
+
 exit $EXIT_CODE

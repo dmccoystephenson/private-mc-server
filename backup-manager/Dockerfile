@@ -2,8 +2,12 @@
 # Alpine had network issues with apk in the build environment
 FROM eclipse-temurin:21-jre
 
-# Install docker CLI
-RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+# Install docker CLI and curl for alert notifications
+# Update package index and install without recommended packages to minimize dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends docker.io curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app

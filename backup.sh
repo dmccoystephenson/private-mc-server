@@ -30,6 +30,67 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to send an alert to the alert-manager
+send_alert() {
+    local title="$1"
+    local message="$2"
+    local level="${3:-INFO}"
+    local source="backup-script"
+    local alert_toggle="${4:-}"
+    
+    # Check if this type of alert is enabled (if toggle variable is provided)
+    if [ -n "$alert_toggle" ]; then
+        local toggle_value="${!alert_toggle:-true}"
+        if [ "$toggle_value" != "true" ]; then
+            log_info "Alert skipped (disabled via $alert_toggle): $title" >&2
+            return 0
+        fi
+    fi
+    
+    # Determine the alert manager URL based on environment
+    # If ALERT_MANAGER_URL is set, use it
+    # Otherwise, check if we're in a container or on the host
+    local alert_url
+    if [ -n "${ALERT_MANAGER_URL:-}" ]; then
+        alert_url="$ALERT_MANAGER_URL"
+    elif [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+        # Running inside a Docker container, use internal service name
+        alert_url="http://alert-manager:8090/api/alerts"
+    else
+        # Running on host, use localhost
+        alert_url="http://localhost:8090/api/alerts"
+    fi
+    
+    # Try to send alert, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        log_info "Sending alert to $alert_url: $title ($level)" >&2
+        
+        # Capture HTTP response code and any error output
+        local http_code
+        local curl_output
+        curl_output=$(curl -X POST "$alert_url" \
+          -H "Content-Type: application/json" \
+          -w "\n%{http_code}" \
+          --max-time 5 \
+          --connect-timeout 5 \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          2>&1 || echo "CURL_FAILED")
+        
+        http_code=$(echo "$curl_output" | tail -1)
+        
+        if [ "$curl_output" = "CURL_FAILED" ]; then
+            log_warning "Alert failed: curl command failed (connection error or timeout)" >&2
+        elif [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            log_success "Alert sent successfully (HTTP $http_code)" >&2
+        else
+            log_warning "Alert failed: HTTP $http_code" >&2
+        fi
+    else
+        log_warning "curl not available, skipping alert: $title" >&2
+    fi
+}
+
+
 # Function to load env value
 get_env_value() {
     local key=$1
@@ -129,6 +190,10 @@ create_backup() {
         log_info "This is normal for a running server and the backup should still be usable." >&2
     else
         log_error "Backup failed! Exit code: $docker_exit_code" >&2
+        
+        # Send failure alert
+        send_alert "Backup Failed" "Minecraft server backup creation failed with exit code: $docker_exit_code" "ERROR" "ALERTS_BACKUP_FAILURE"
+        
         return 1
     fi
     
@@ -137,10 +202,18 @@ create_backup() {
         local backup_size
         backup_size=$(du -h "$backup_dir/mcserver-backup.tar.gz" | cut -f1)
         log_success "Backup created successfully: $backup_dir/mcserver-backup.tar.gz ($backup_size)" >&2
+        
+        # Send success alert
+        send_alert "Backup Completed" "Minecraft server backup created successfully. Size: $backup_size, Location: $backup_dir" "INFO" "ALERTS_BACKUP_SUCCESS"
+        
         echo "$backup_dir"
         return 0
     else
         log_error "Backup verification failed!" >&2
+        
+        # Send failure alert
+        send_alert "Backup Failed" "Minecraft server backup verification failed!" "ERROR" "ALERTS_BACKUP_FAILURE"
+        
         return 1
     fi
 }

@@ -31,6 +31,45 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to send an alert to the alert-manager
+send_alert() {
+    local title="$1"
+    local message="$2"
+    local level="${3:-INFO}"
+    local source="upgrade-script"
+    local alert_toggle="${4:-}"
+    
+    # Check if this type of alert is enabled (if toggle variable is provided)
+    if [ -n "$alert_toggle" ]; then
+        local toggle_value="${!alert_toggle:-true}"
+        if [ "$toggle_value" != "true" ]; then
+            log_info "Alert skipped (disabled via $alert_toggle): $title"
+            return 0
+        fi
+    fi
+    
+    # Determine the alert manager URL based on environment
+    local alert_url
+    if [ -n "${ALERT_MANAGER_URL:-}" ]; then
+        alert_url="$ALERT_MANAGER_URL"
+    elif [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+        alert_url="http://alert-manager:8090/api/alerts"
+    else
+        alert_url="http://localhost:8090/api/alerts"
+    fi
+    
+    # Try to send alert, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        curl -X POST "$alert_url" \
+          -H "Content-Type: application/json" \
+          --max-time 5 \
+          --connect-timeout 5 \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          >/dev/null 2>&1 || true
+    fi
+}
+
+
 # Function to load env value
 get_env_value() {
     local key=$1
@@ -117,6 +156,7 @@ main() {
     
     echo ""
     log_info "Starting upgrade process..."
+    send_alert "Server Upgrade Started" "Starting upgrade from $current_version to $new_version" "INFO" "ALERTS_UPGRADE_START"
     echo ""
     
     # Step 1: Stop the server
@@ -174,6 +214,7 @@ main() {
     else
         log_error "Docker build failed!"
         log_warning "Your backup is available at: $backup_dir"
+        send_alert "Server Upgrade Failed" "Upgrade from $current_version to $new_version failed during Docker build. Backup: $backup_dir" "ERROR" "ALERTS_UPGRADE_FAILURE"
         exit 1
     fi
     echo ""
@@ -203,6 +244,7 @@ main() {
     # Final summary
     echo "=========================================="
     log_success "Upgrade completed successfully!"
+    send_alert "Server Upgrade Complete" "Successfully upgraded from $current_version to $new_version. Backup: $backup_dir" "INFO" "ALERTS_UPGRADE_COMPLETE"
     echo "=========================================="
     echo ""
     log_info "Summary:"

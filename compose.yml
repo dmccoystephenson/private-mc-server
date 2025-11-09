@@ -15,6 +15,9 @@ services:
     volumes:
       - mcserver:/mcserver
       - ./deposit-box:/deposit-box
+    depends_on:
+      alert-manager:
+        condition: service_healthy
     environment:
       - MINECRAFT_VERSION=${MINECRAFT_VERSION}
       - OPERATOR_UUID=${OPERATOR_UUID}
@@ -29,6 +32,12 @@ services:
       - ONLINE_MODE=${ONLINE_MODE}
       - JAVA_OPTS=${JAVA_OPTS}
       - RCON_PASSWORD=${RCON_PASSWORD:-minecraft}
+      # Alert configuration
+      - ALERT_MANAGER_URL=${ALERT_MANAGER_URL:-}
+      - ALERTS_SERVER_START=${ALERTS_SERVER_START:-true}
+      - ALERTS_SERVER_STOP=${ALERTS_SERVER_STOP:-true}
+      - ALERTS_SERVER_CRASH=${ALERTS_SERVER_CRASH:-true}
+      - ALERTS_CONFIG_WARNING=${ALERTS_CONFIG_WARNING:-false}
 
   webapp:
     build:
@@ -84,6 +93,9 @@ services:
       - ./backup.sh:/backup.sh:ro
       - ./.env:/.env:ro
       - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      alert-manager:
+        condition: service_healthy
     environment:
       - BACKUP_SCRIPT_PATH=/backup.sh
       - BACKUP_DIRECTORY=/backups
@@ -91,6 +103,28 @@ services:
       - BACKUP_MAX_SIZE_MB=${BACKUP_MAX_SIZE_MB:-10240}
       - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 0 2 * * ?}
       - VOLUME_NAME=${VOLUME_NAME:-mcserver}
+      # Alert configuration
+      - ALERT_MANAGER_URL=${ALERT_MANAGER_URL:-}
+      - ALERTS_BACKUP_SUCCESS=${ALERTS_BACKUP_SUCCESS:-true}
+      - ALERTS_BACKUP_FAILURE=${ALERTS_BACKUP_FAILURE:-true}
+
+  alert-manager:
+    build:
+      context: ./alert-manager
+    image: open-mc-server-alert-manager
+    restart: always
+    container_name: ${ALERT_CONTAINER_NAME:-open-mc-alert-manager}
+    ports:
+      - "${ALERT_PORT:-8090}:8090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - DISCORD_ENABLED=${DISCORD_ENABLED:-false}
 
 volumes:
   mcserver:
