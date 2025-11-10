@@ -133,4 +133,141 @@ public class ServerController {
         logger.debug("API request: /api/activity-tracker/enabled - returning: {}", enabled);
         return Map.of("enabled", enabled);
     }
+    
+    // Allow/Deny List Management Endpoints
+    
+    private boolean validateAdminCredentials(String username, String password) {
+        return username != null && password != null &&
+               serverConfig.getAdminUsername().equals(username) &&
+               serverConfig.getAdminPassword().equals(password);
+    }
+    
+    @PostMapping("/api/whitelist/toggle")
+    @ResponseBody
+    public Map<String, String> toggleWhitelist(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        String action = payload.get("action"); // "on" or "off"
+        
+        if (!validateAdminCredentials(username, password)) {
+            return Map.of("result", "Error: Invalid credentials");
+        }
+        
+        if (action == null || (!action.equals("on") && !action.equals("off"))) {
+            return Map.of("result", "Error: Action must be 'on' or 'off'");
+        }
+        
+        String result = rconService.sendCommand("whitelist " + action);
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/whitelist/add")
+    @ResponseBody
+    public Map<String, String> addToWhitelist(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        String player = payload.get("player");
+        
+        if (!validateAdminCredentials(username, password)) {
+            return Map.of("result", "Error: Invalid credentials");
+        }
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        String result = rconService.sendCommand("whitelist add " + player.trim());
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/whitelist/remove")
+    @ResponseBody
+    public Map<String, String> removeFromWhitelist(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        String player = payload.get("player");
+        
+        if (!validateAdminCredentials(username, password)) {
+            return Map.of("result", "Error: Invalid credentials");
+        }
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        String result = rconService.sendCommand("whitelist remove " + player.trim());
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/whitelist/list")
+    @ResponseBody
+    public Map<String, String> listWhitelist(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        
+        if (!validateAdminCredentials(username, password)) {
+            return Map.of("result", "Error: Invalid credentials");
+        }
+        
+        String result = rconService.sendCommand("whitelist list");
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/ban/add")
+    @ResponseBody
+    public Map<String, String> banPlayer(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        String player = payload.get("player");
+        String reason = payload.get("reason");
+        
+        if (!validateAdminCredentials(username, password)) {
+            return Map.of("result", "Error: Invalid credentials");
+        }
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        String command = "ban " + player.trim();
+        if (reason != null && !reason.trim().isEmpty()) {
+            command += " " + reason.trim();
+        }
+        
+        String result = rconService.sendCommand(command);
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/ban/remove")
+    @ResponseBody
+    public Map<String, String> unbanPlayer(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        String player = payload.get("player");
+        
+        if (!validateAdminCredentials(username, password)) {
+            return Map.of("result", "Error: Invalid credentials");
+        }
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        String result = rconService.sendCommand("pardon " + player.trim());
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/ban/list")
+    @ResponseBody
+    public Map<String, String> listBans(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        
+        if (!validateAdminCredentials(username, password)) {
+            return Map.of("result", "Error: Invalid credentials");
+        }
+        
+        String result = rconService.sendCommand("banlist");
+        return Map.of("result", result);
+    }
 }

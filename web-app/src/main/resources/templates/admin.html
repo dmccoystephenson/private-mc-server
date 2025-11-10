@@ -159,6 +159,71 @@
         .command-output.show {
             display: block;
         }
+        
+        .management-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .management-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .list-display {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 60px;
+            display: none;
+        }
+        
+        .list-display.show {
+            display: block;
+        }
+        
+        .player-input-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .player-input-row .command-input {
+            flex: 1;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+        }
+        
+        .toggle-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -198,9 +263,69 @@
             </form>
             <div id="commandOutput" class="command-output"></div>
         </div>
+        
+        <div class="management-section">
+            <div class="card">
+                <h2>Whitelist Management</h2>
+                <p style="color: #6b7280; margin-bottom: 15px;">Control who can join the server</p>
+                
+                <div class="toggle-buttons">
+                    <button class="btn btn-primary" onclick="toggleWhitelist('on')">Enable Whitelist</button>
+                    <button class="btn btn-secondary" onclick="toggleWhitelist('off')">Disable Whitelist</button>
+                    <button class="btn btn-secondary" onclick="viewWhitelist()">View List</button>
+                </div>
+                
+                <div class="player-input-row">
+                    <input type="text" 
+                           id="whitelistPlayerInput" 
+                           class="command-input" 
+                           placeholder="Player name">
+                    <button class="btn btn-primary" onclick="addToWhitelist()">Add</button>
+                    <button class="btn btn-danger" onclick="removeFromWhitelist()">Remove</button>
+                </div>
+                
+                <div id="whitelistOutput" class="list-display"></div>
+            </div>
+            
+            <div class="card">
+                <h2>Ban Management</h2>
+                <p style="color: #6b7280; margin-bottom: 15px;">Manage banned players</p>
+                
+                <button class="btn btn-secondary" onclick="viewBanList()" style="margin-bottom: 10px;">View Ban List</button>
+                
+                <div class="player-input-row">
+                    <input type="text" 
+                           id="banPlayerInput" 
+                           class="command-input" 
+                           placeholder="Player name">
+                    <button class="btn btn-danger" onclick="banPlayer()">Ban</button>
+                    <button class="btn btn-primary" onclick="unbanPlayer()">Unban</button>
+                </div>
+                
+                <input type="text" 
+                       id="banReasonInput" 
+                       class="command-input" 
+                       placeholder="Optional ban reason"
+                       style="margin-top: 10px;">
+                
+                <div id="banOutput" class="list-display"></div>
+            </div>
+        </div>
     </div>
     
     <script>
+        function getCredentials() {
+            const username = document.getElementById('usernameInput').value.trim();
+            const password = document.getElementById('passwordInput').value.trim();
+            
+            if (!username || !password) {
+                alert('Please enter your admin credentials in the Admin Console section first');
+                return null;
+            }
+            
+            return { username, password };
+        }
+        
         async function sendCommand(event) {
             event.preventDefault();
             
@@ -233,6 +358,228 @@
                 
                 const data = await response.json();
                 output.textContent = '> ' + command + '\n\n' + data.result;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        // Whitelist Management Functions
+        async function toggleWhitelist(action) {
+            const creds = getCredentials();
+            if (!creds) return;
+            
+            const output = document.getElementById('whitelistOutput');
+            output.textContent = 'Processing...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/whitelist/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: creds.username,
+                        password: creds.password,
+                        action: action
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function viewWhitelist() {
+            const creds = getCredentials();
+            if (!creds) return;
+            
+            const output = document.getElementById('whitelistOutput');
+            output.textContent = 'Loading whitelist...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/whitelist/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: creds.username,
+                        password: creds.password
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function addToWhitelist() {
+            const creds = getCredentials();
+            if (!creds) return;
+            
+            const playerInput = document.getElementById('whitelistPlayerInput');
+            const player = playerInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('whitelistOutput');
+            output.textContent = 'Adding player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/whitelist/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: creds.username,
+                        password: creds.password,
+                        player: player
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function removeFromWhitelist() {
+            const creds = getCredentials();
+            if (!creds) return;
+            
+            const playerInput = document.getElementById('whitelistPlayerInput');
+            const player = playerInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('whitelistOutput');
+            output.textContent = 'Removing player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/whitelist/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: creds.username,
+                        password: creds.password,
+                        player: player
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        // Ban Management Functions
+        async function viewBanList() {
+            const creds = getCredentials();
+            if (!creds) return;
+            
+            const output = document.getElementById('banOutput');
+            output.textContent = 'Loading ban list...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/ban/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: creds.username,
+                        password: creds.password
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function banPlayer() {
+            const creds = getCredentials();
+            if (!creds) return;
+            
+            const playerInput = document.getElementById('banPlayerInput');
+            const reasonInput = document.getElementById('banReasonInput');
+            const player = playerInput.value.trim();
+            const reason = reasonInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('banOutput');
+            output.textContent = 'Banning player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/ban/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: creds.username,
+                        password: creds.password,
+                        player: player,
+                        reason: reason
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
+                reasonInput.value = '';
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function unbanPlayer() {
+            const creds = getCredentials();
+            if (!creds) return;
+            
+            const playerInput = document.getElementById('banPlayerInput');
+            const player = playerInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('banOutput');
+            output.textContent = 'Unbanning player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/ban/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: creds.username,
+                        password: creds.password,
+                        player: player
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
