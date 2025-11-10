@@ -73,6 +73,25 @@
             font-weight: 600;
         }
         
+        .nav button {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            margin: 0 5px;
+            transition: background 0.3s ease;
+            display: inline-block;
+            margin-bottom: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .nav button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
         .card {
             background: white;
             border-radius: 12px;
@@ -236,22 +255,13 @@
         <div class="nav">
             <a href="/public">Public</a>
             <a href="/admin" class="active">Admin</a>
+            <button onclick="logout()" class="btn btn-secondary" style="margin-left: 10px;">Logout</button>
         </div>
         
         <div class="card">
             <h2>Admin Console</h2>
             <p style="color: #6b7280; margin-bottom: 15px;">Send commands to the server using RCON</p>
             <form class="command-form" onsubmit="sendCommand(event)">
-                <input type="text" 
-                       id="usernameInput" 
-                       class="command-input" 
-                       placeholder="Admin username" 
-                       required>
-                <input type="password" 
-                       id="passwordInput" 
-                       class="command-input" 
-                       placeholder="Admin password" 
-                       required>
                 <div class="command-row">
                     <input type="text" 
                            id="commandInput" 
@@ -314,31 +324,30 @@
     </div>
     
     <script>
-        function getCredentials() {
-            const username = document.getElementById('usernameInput').value.trim();
-            const password = document.getElementById('passwordInput').value.trim();
-            
-            if (!username || !password) {
-                alert('Please enter your admin credentials in the Admin Console section first');
-                return null;
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
             }
-            
-            return { username, password };
         }
         
         async function sendCommand(event) {
             event.preventDefault();
             
-            const usernameInput = document.getElementById('usernameInput');
-            const passwordInput = document.getElementById('passwordInput');
             const commandInput = document.getElementById('commandInput');
             const output = document.getElementById('commandOutput');
             
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value.trim();
             const command = commandInput.value.trim();
             
-            if (!username || !password || !command) return;
+            if (!command) return;
             
             output.textContent = 'Sending command...';
             output.classList.add('show');
@@ -350,14 +359,17 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ 
-                        username: username,
-                        password: password,
                         command: command 
                     })
                 });
                 
                 const data = await response.json();
                 output.textContent = '> ' + command + '\n\n' + data.result;
+                
+                // Check if session expired
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
@@ -365,9 +377,6 @@
         
         // Whitelist Management Functions
         async function toggleWhitelist(action) {
-            const creds = getCredentials();
-            if (!creds) return;
-            
             const output = document.getElementById('whitelistOutput');
             output.textContent = 'Processing...';
             output.classList.add('show');
@@ -377,23 +386,22 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        username: creds.username,
-                        password: creds.password,
                         action: action
                     })
                 });
                 
                 const data = await response.json();
                 output.textContent = data.result;
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
         }
         
         async function viewWhitelist() {
-            const creds = getCredentials();
-            if (!creds) return;
-            
             const output = document.getElementById('whitelistOutput');
             output.textContent = 'Loading whitelist...';
             output.classList.add('show');
@@ -401,24 +409,21 @@
             try {
                 const response = await fetch('/api/whitelist/list', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: creds.username,
-                        password: creds.password
-                    })
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 const data = await response.json();
                 output.textContent = data.result;
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
         }
         
         async function addToWhitelist() {
-            const creds = getCredentials();
-            if (!creds) return;
-            
             const playerInput = document.getElementById('whitelistPlayerInput');
             const player = playerInput.value.trim();
             
@@ -436,8 +441,6 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        username: creds.username,
-                        password: creds.password,
                         player: player
                     })
                 });
@@ -445,15 +448,16 @@
                 const data = await response.json();
                 output.textContent = data.result;
                 playerInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
         }
         
         async function removeFromWhitelist() {
-            const creds = getCredentials();
-            if (!creds) return;
-            
             const playerInput = document.getElementById('whitelistPlayerInput');
             const player = playerInput.value.trim();
             
@@ -471,8 +475,6 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        username: creds.username,
-                        password: creds.password,
                         player: player
                     })
                 });
@@ -480,6 +482,10 @@
                 const data = await response.json();
                 output.textContent = data.result;
                 playerInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
@@ -487,9 +493,6 @@
         
         // Ban Management Functions
         async function viewBanList() {
-            const creds = getCredentials();
-            if (!creds) return;
-            
             const output = document.getElementById('banOutput');
             output.textContent = 'Loading ban list...';
             output.classList.add('show');
@@ -497,24 +500,21 @@
             try {
                 const response = await fetch('/api/ban/list', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: creds.username,
-                        password: creds.password
-                    })
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 const data = await response.json();
                 output.textContent = data.result;
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
         }
         
         async function banPlayer() {
-            const creds = getCredentials();
-            if (!creds) return;
-            
             const playerInput = document.getElementById('banPlayerInput');
             const reasonInput = document.getElementById('banReasonInput');
             const player = playerInput.value.trim();
@@ -534,8 +534,6 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        username: creds.username,
-                        password: creds.password,
                         player: player,
                         reason: reason
                     })
@@ -545,15 +543,16 @@
                 output.textContent = data.result;
                 playerInput.value = '';
                 reasonInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }
         }
         
         async function unbanPlayer() {
-            const creds = getCredentials();
-            if (!creds) return;
-            
             const playerInput = document.getElementById('banPlayerInput');
             const player = playerInput.value.trim();
             
@@ -571,8 +570,6 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        username: creds.username,
-                        password: creds.password,
                         player: player
                     })
                 });
@@ -580,6 +577,10 @@
                 const data = await response.json();
                 output.textContent = data.result;
                 playerInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }

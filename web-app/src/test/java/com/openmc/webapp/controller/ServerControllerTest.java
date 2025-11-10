@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashMap;
@@ -53,6 +54,13 @@ class ServerControllerTest {
         when(serverConfig.getAdminPassword()).thenReturn("admin");
         when(activityTrackerService.isEnabled()).thenReturn(false);
     }
+    
+    private MockHttpSession createAuthenticatedSession() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("authenticated", true);
+        session.setAttribute("username", "admin");
+        return session;
+    }
 
     @Test
     @DisplayName("Should redirect to /public on GET /")
@@ -76,9 +84,19 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should return admin page on GET /admin")
-    void shouldReturnAdminPageOnGetAdmin() throws Exception {
+    @DisplayName("Should redirect to login when accessing admin without authentication")
+    void shouldRedirectToLoginWhenNotAuthenticated() throws Exception {
         mockMvc.perform(get("/admin"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+    }
+    
+    @Test
+    @DisplayName("Should return admin page on GET /admin with authentication")
+    void shouldReturnAdminPageOnGetAdminWithAuth() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
+        mockMvc.perform(get("/admin").session(session))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin"));
     }
@@ -109,51 +127,36 @@ class ServerControllerTest {
     @Test
     @DisplayName("Should accept valid command with authentication")
     void shouldAcceptValidCommandWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("list")).thenReturn("There are 0 of a max of 20 players online");
 
         mockMvc.perform(post("/api/command")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"command\":\"list\"}"))
+                        .content("{\"command\":\"list\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").exists());
     }
 
     @Test
-    @DisplayName("Should reject command without username")
-    void shouldRejectCommandWithoutUsername() throws Exception {
+    @DisplayName("Should reject command without authentication")
+    void shouldRejectCommandWithoutAuthentication() throws Exception {
         mockMvc.perform(post("/api/command")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"password\":\"admin\",\"command\":\"list\"}"))
+                        .content("{\"command\":\"list\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result").value(containsString("Username and password are required")));
-    }
-
-    @Test
-    @DisplayName("Should reject command without password")
-    void shouldRejectCommandWithoutPassword() throws Exception {
-        mockMvc.perform(post("/api/command")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"command\":\"list\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result").value(containsString("Username and password are required")));
-    }
-
-    @Test
-    @DisplayName("Should reject command with invalid credentials")
-    void shouldRejectCommandWithInvalidCredentials() throws Exception {
-        mockMvc.perform(post("/api/command")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"wrong\",\"password\":\"wrong\",\"command\":\"list\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result").value(containsString("Invalid username or password")));
+                .andExpect(jsonPath("$.result").value(containsString("must be logged in")));
     }
 
     @Test
     @DisplayName("Should reject empty command")
     void shouldRejectEmptyCommand() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
         mockMvc.perform(post("/api/command")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"command\":\"\"}"))
+                        .content("{\"command\":\"\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(containsString("Command cannot be empty")));
     }
@@ -161,9 +164,12 @@ class ServerControllerTest {
     @Test
     @DisplayName("Should reject null command")
     void shouldRejectNullCommand() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
         mockMvc.perform(post("/api/command")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\"}"))
+                        .content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(containsString("Command cannot be empty")));
     }
@@ -171,101 +177,116 @@ class ServerControllerTest {
     // Whitelist Management Tests
     
     @Test
-    @DisplayName("Should enable whitelist with valid credentials")
-    void shouldEnableWhitelistWithValidCredentials() throws Exception {
+    @DisplayName("Should enable whitelist with authentication")
+    void shouldEnableWhitelistWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist on")).thenReturn("Turned on the whitelist");
 
         mockMvc.perform(post("/api/whitelist/toggle")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"action\":\"on\"}"))
+                        .content("{\"action\":\"on\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("Turned on the whitelist"));
     }
 
     @Test
-    @DisplayName("Should disable whitelist with valid credentials")
-    void shouldDisableWhitelistWithValidCredentials() throws Exception {
+    @DisplayName("Should disable whitelist with authentication")
+    void shouldDisableWhitelistWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist off")).thenReturn("Turned off the whitelist");
 
         mockMvc.perform(post("/api/whitelist/toggle")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"action\":\"off\"}"))
+                        .content("{\"action\":\"off\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("Turned off the whitelist"));
     }
 
     @Test
-    @DisplayName("Should reject whitelist toggle with invalid credentials")
-    void shouldRejectWhitelistToggleWithInvalidCredentials() throws Exception {
+    @DisplayName("Should reject whitelist toggle without authentication")
+    void shouldRejectWhitelistToggleWithoutAuthentication() throws Exception {
         mockMvc.perform(post("/api/whitelist/toggle")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"wrong\",\"password\":\"wrong\",\"action\":\"on\"}"))
+                        .content("{\"action\":\"on\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result").value(containsString("Invalid credentials")));
+                .andExpect(jsonPath("$.result").value(containsString("must be logged in")));
     }
 
     @Test
     @DisplayName("Should reject whitelist toggle with invalid action")
     void shouldRejectWhitelistToggleWithInvalidAction() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
         mockMvc.perform(post("/api/whitelist/toggle")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"action\":\"invalid\"}"))
+                        .content("{\"action\":\"invalid\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(containsString("Action must be 'on' or 'off'")));
     }
 
     @Test
-    @DisplayName("Should add player to whitelist with valid credentials")
-    void shouldAddPlayerToWhitelistWithValidCredentials() throws Exception {
+    @DisplayName("Should add player to whitelist with authentication")
+    void shouldAddPlayerToWhitelistWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist add TestPlayer")).thenReturn("Added TestPlayer to the whitelist");
 
         mockMvc.perform(post("/api/whitelist/add")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"player\":\"TestPlayer\"}"))
+                        .content("{\"player\":\"TestPlayer\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("Added TestPlayer to the whitelist"));
     }
 
     @Test
-    @DisplayName("Should remove player from whitelist with valid credentials")
-    void shouldRemovePlayerFromWhitelistWithValidCredentials() throws Exception {
+    @DisplayName("Should remove player from whitelist with authentication")
+    void shouldRemovePlayerFromWhitelistWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist remove TestPlayer")).thenReturn("Removed TestPlayer from the whitelist");
 
         mockMvc.perform(post("/api/whitelist/remove")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"player\":\"TestPlayer\"}"))
+                        .content("{\"player\":\"TestPlayer\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("Removed TestPlayer from the whitelist"));
     }
 
     @Test
-    @DisplayName("Should list whitelist with valid credentials")
-    void shouldListWhitelistWithValidCredentials() throws Exception {
+    @DisplayName("Should list whitelist with authentication")
+    void shouldListWhitelistWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist list")).thenReturn("There are 2 whitelisted players: Player1, Player2");
 
         mockMvc.perform(post("/api/whitelist/list")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\"}"))
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("There are 2 whitelisted players: Player1, Player2"));
     }
 
     @Test
-    @DisplayName("Should reject whitelist operations with invalid credentials")
-    void shouldRejectWhitelistOperationsWithInvalidCredentials() throws Exception {
+    @DisplayName("Should reject whitelist operations without authentication")
+    void shouldRejectWhitelistOperationsWithoutAuthentication() throws Exception {
         mockMvc.perform(post("/api/whitelist/add")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"wrong\",\"password\":\"wrong\",\"player\":\"TestPlayer\"}"))
+                        .content("{\"player\":\"TestPlayer\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result").value(containsString("Invalid credentials")));
+                .andExpect(jsonPath("$.result").value(containsString("must be logged in")));
     }
 
     @Test
     @DisplayName("Should reject whitelist add without player name")
     void shouldRejectWhitelistAddWithoutPlayerName() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
         mockMvc.perform(post("/api/whitelist/add")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"player\":\"\"}"))
+                        .content("{\"player\":\"\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(containsString("Player name is required")));
     }
@@ -273,13 +294,15 @@ class ServerControllerTest {
     // Ban Management Tests
 
     @Test
-    @DisplayName("Should ban player with valid credentials")
-    void shouldBanPlayerWithValidCredentials() throws Exception {
+    @DisplayName("Should ban player with authentication")
+    void shouldBanPlayerWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("ban TestPlayer")).thenReturn("Banned TestPlayer");
 
         mockMvc.perform(post("/api/ban/add")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"player\":\"TestPlayer\"}"))
+                        .content("{\"player\":\"TestPlayer\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("Banned TestPlayer"));
     }
@@ -287,56 +310,86 @@ class ServerControllerTest {
     @Test
     @DisplayName("Should ban player with reason")
     void shouldBanPlayerWithReason() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("ban TestPlayer Griefing")).thenReturn("Banned TestPlayer: Griefing");
 
         mockMvc.perform(post("/api/ban/add")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"player\":\"TestPlayer\",\"reason\":\"Griefing\"}"))
+                        .content("{\"player\":\"TestPlayer\",\"reason\":\"Griefing\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("Banned TestPlayer: Griefing"));
     }
 
     @Test
-    @DisplayName("Should unban player with valid credentials")
-    void shouldUnbanPlayerWithValidCredentials() throws Exception {
+    @DisplayName("Should unban player with authentication")
+    void shouldUnbanPlayerWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("pardon TestPlayer")).thenReturn("Unbanned TestPlayer");
 
         mockMvc.perform(post("/api/ban/remove")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"player\":\"TestPlayer\"}"))
+                        .content("{\"player\":\"TestPlayer\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("Unbanned TestPlayer"));
     }
 
     @Test
-    @DisplayName("Should list banned players with valid credentials")
-    void shouldListBannedPlayersWithValidCredentials() throws Exception {
+    @DisplayName("Should list banned players with authentication")
+    void shouldListBannedPlayersWithAuthentication() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("banlist")).thenReturn("There are 1 banned players: BadPlayer");
 
         mockMvc.perform(post("/api/ban/list")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\"}"))
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("There are 1 banned players: BadPlayer"));
     }
 
     @Test
-    @DisplayName("Should reject ban operations with invalid credentials")
-    void shouldRejectBanOperationsWithInvalidCredentials() throws Exception {
+    @DisplayName("Should reject ban operations without authentication")
+    void shouldRejectBanOperationsWithoutAuthentication() throws Exception {
         mockMvc.perform(post("/api/ban/add")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"wrong\",\"password\":\"wrong\",\"player\":\"TestPlayer\"}"))
+                        .content("{\"player\":\"TestPlayer\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result").value(containsString("Invalid credentials")));
+                .andExpect(jsonPath("$.result").value(containsString("must be logged in")));
     }
 
     @Test
     @DisplayName("Should reject ban without player name")
     void shouldRejectBanWithoutPlayerName() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
         mockMvc.perform(post("/api/ban/add")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin\",\"player\":\"\"}"))
+                        .content("{\"player\":\"\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(containsString("Player name is required")));
+    }
+    
+    // Login Tests
+    
+    @Test
+    @DisplayName("Should login with valid credentials")
+    void shouldLoginWithValidCredentials() throws Exception {
+        mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"admin\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+    
+    @Test
+    @DisplayName("Should reject login with invalid credentials")
+    void shouldRejectLoginWithInvalidCredentials() throws Exception {
+        mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"wrong\",\"password\":\"wrong\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false));
     }
 }
