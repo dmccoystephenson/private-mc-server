@@ -57,30 +57,31 @@ The alert manager supports four severity levels:
 
 **POST** `/api/alerts`
 
-Send an alert notification.
-
-Request body: JSON object with title, message, level, and source fields.
-
-Response: Success message confirming alert was sent.
-
-### Send Message
-
-**POST** `/api/messages`
-
-Send a message to one or more destinations (e.g., Minecraft server, Discord).
+Send an alert notification to one or more destinations.
 
 Request body:
 ```json
 {
-  "text": "Your message text here",
-  "destinations": ["minecraft"]
+  "title": "Alert Title",
+  "message": "Alert message content",
+  "level": "INFO",
+  "source": "module-name",
+  "destinations": ["DISCORD", "MINECRAFT"]
 }
 ```
 
-Supported destinations:
-- `minecraft` - Sends message to Minecraft server via RCON (requires RCON to be enabled)
+Fields:
+- `title` (optional): Title of the alert
+- `message` (required): Message content
+- `level` (required): Alert severity level (INFO, WARNING, ERROR, CRITICAL)
+- `source` (required): Source module generating the alert
+- `destinations` (optional): Array of destination enums. If not specified, sends to all configured destinations.
 
-Response: Success message confirming message was sent.
+Supported destinations:
+- `DISCORD` - Sends alert to Discord via webhook
+- `MINECRAFT` - Sends message to Minecraft server via RCON
+
+Response: Success message confirming alert was sent.
 
 ### Health Check
 

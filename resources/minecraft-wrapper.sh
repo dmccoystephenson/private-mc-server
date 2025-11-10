@@ -60,36 +60,26 @@ send_alert() {
 # shellcheck disable=SC2317  # Function called from graceful_shutdown
 send_message() {
     local text="$1"
-    local destinations="${2:-minecraft}"
+    local destination="${2:-MINECRAFT}"
     
-    local message_url="${ALERT_MANAGER_URL:-http://alert-manager:8090}/api/messages"
+    local alert_url="${ALERT_MANAGER_URL:-http://alert-manager:8090}/api/alerts"
     
     # Try to send message, but don't fail if it doesn't work
     if command -v curl >/dev/null 2>&1; then
-        log "Sending message to $message_url: $text"
+        log "Sending message to $alert_url: $text"
         
-        # Construct JSON array for destinations
-        local destinations_json="["
-        local first=true
-        for dest in $destinations; do
-            if [ "$first" = true ]; then
-                first=false
-            else
-                destinations_json="$destinations_json,"
-            fi
-            destinations_json="$destinations_json\"$dest\""
-        done
-        destinations_json="$destinations_json]"
+        # Construct JSON array for destinations (uppercase for enum)
+        local destinations_json="[\"$destination\"]"
         
         # Capture HTTP response code and any error output
         local http_code
         local curl_output
-        curl_output=$(curl -X POST "$message_url" \
+        curl_output=$(curl -X POST "$alert_url" \
           -H "Content-Type: application/json" \
           -w "\n%{http_code}" \
           --max-time 5 \
           --connect-timeout 5 \
-          -d "{\"text\":\"$text\",\"destinations\":$destinations_json}" \
+          -d "{\"message\":\"$text\",\"destinations\":$destinations_json,\"source\":\"minecraft-server\",\"level\":\"INFO\"}" \
           2>&1 || echo "CURL_FAILED")
         
         http_code=$(echo "$curl_output" | tail -1)
@@ -122,16 +112,16 @@ graceful_shutdown() {
         # Warn players before shutdown with countdown via alert-manager
         log "Warning players of impending shutdown..."
         
-        send_message "Server is shutting down in 30 seconds!" "minecraft"
+        send_message "Server is shutting down in 30 seconds!" "MINECRAFT"
         sleep 10
         
-        send_message "Server is shutting down in 20 seconds!" "minecraft"
+        send_message "Server is shutting down in 20 seconds!" "MINECRAFT"
         sleep 10
         
-        send_message "Server is shutting down in 10 seconds!" "minecraft"
+        send_message "Server is shutting down in 10 seconds!" "MINECRAFT"
         sleep 5
         
-        send_message "Server is shutting down in 5 seconds!" "minecraft"
+        send_message "Server is shutting down in 5 seconds!" "MINECRAFT"
         sleep 5
         
         log "Sending 'stop' command to Minecraft server..."
