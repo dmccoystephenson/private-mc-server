@@ -57,6 +57,7 @@ send_alert() {
 }
 
 # Function: Send message to players via alert-manager
+# shellcheck disable=SC2317  # Function called from graceful_shutdown
 send_message() {
     local text="$1"
     local destinations="${2:-minecraft}"
