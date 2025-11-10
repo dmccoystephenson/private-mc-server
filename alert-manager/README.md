@@ -20,6 +20,10 @@ The following environment variables can be configured in `.env`:
 - `ALERT_PORT`: Port for the alert manager API (default: `8090`)
 - `DISCORD_WEBHOOK_URL`: Discord webhook URL for sending notifications
 - `DISCORD_ENABLED`: Enable/disable Discord notifications (default: `false`)
+- `MINECRAFT_RCON_HOST`: Minecraft server hostname for RCON (default: `mcserver`)
+- `MINECRAFT_RCON_PORT`: Minecraft server RCON port (default: `25575`)
+- `MINECRAFT_RCON_PASSWORD`: Password for Minecraft RCON (default: uses `RCON_PASSWORD` from compose.yml)
+- `MINECRAFT_RCON_ENABLED`: Enable/disable Minecraft message sending (default: `true`)
 
 ### Discord Webhook Setup
 
@@ -33,6 +37,10 @@ To enable Discord notifications:
 2. Add the webhook URL to your `.env` file with `DISCORD_WEBHOOK_URL` and set `DISCORD_ENABLED=true`
 
 3. Restart the infrastructure
+
+### Minecraft RCON Setup
+
+The alert manager can send messages directly to the Minecraft server using RCON. This is enabled by default and uses the same RCON password configured for the Minecraft server. The minecraft-wrapper script uses this functionality to send shutdown warnings to players.
 
 ## Alert Levels
 
@@ -54,6 +62,25 @@ Send an alert notification.
 Request body: JSON object with title, message, level, and source fields.
 
 Response: Success message confirming alert was sent.
+
+### Send Message
+
+**POST** `/api/messages`
+
+Send a message to one or more destinations (e.g., Minecraft server, Discord).
+
+Request body:
+```json
+{
+  "text": "Your message text here",
+  "destinations": ["minecraft"]
+}
+```
+
+Supported destinations:
+- `minecraft` - Sends message to Minecraft server via RCON (requires RCON to be enabled)
+
+Response: Success message confirming message was sent.
 
 ### Health Check
 
