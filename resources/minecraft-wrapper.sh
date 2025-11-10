@@ -56,6 +56,55 @@ send_alert() {
     fi
 }
 
+# Function: Send message to players via alert-manager
+send_message() {
+    local text="$1"
+    local destinations="${2:-minecraft}"
+    
+    local message_url="${ALERT_MANAGER_URL:-http://alert-manager:8090}/api/messages"
+    
+    # Try to send message, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        log "Sending message to $message_url: $text"
+        
+        # Construct JSON array for destinations
+        local destinations_json="["
+        local first=true
+        for dest in $destinations; do
+            if [ "$first" = true ]; then
+                first=false
+            else
+                destinations_json="$destinations_json,"
+            fi
+            destinations_json="$destinations_json\"$dest\""
+        done
+        destinations_json="$destinations_json]"
+        
+        # Capture HTTP response code and any error output
+        local http_code
+        local curl_output
+        curl_output=$(curl -X POST "$message_url" \
+          -H "Content-Type: application/json" \
+          -w "\n%{http_code}" \
+          --max-time 5 \
+          --connect-timeout 5 \
+          -d "{\"text\":\"$text\",\"destinations\":$destinations_json}" \
+          2>&1 || echo "CURL_FAILED")
+        
+        http_code=$(echo "$curl_output" | tail -1)
+        
+        if [ "$curl_output" = "CURL_FAILED" ]; then
+            log "Message failed: curl command failed (connection error or timeout)"
+        elif [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            log "Message sent successfully (HTTP $http_code)"
+        else
+            log "Message failed: HTTP $http_code"
+        fi
+    else
+        log "curl not available, skipping message: $text"
+    fi
+}
+
 # Variables
 SERVER_JAR="$1"
 SERVER_DIR="$2" 
@@ -69,19 +118,19 @@ graceful_shutdown() {
     log "Received shutdown signal, initiating graceful server stop..."
     
     if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        # Warn players before shutdown with countdown
+        # Warn players before shutdown with countdown via alert-manager
         log "Warning players of impending shutdown..."
         
-        echo "say Server is shutting down in 30 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 30 seconds!" "minecraft"
         sleep 10
         
-        echo "say Server is shutting down in 20 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 20 seconds!" "minecraft"
         sleep 10
         
-        echo "say Server is shutting down in 10 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 10 seconds!" "minecraft"
         sleep 5
         
-        echo "say Server is shutting down in 5 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 5 seconds!" "minecraft"
         sleep 5
         
         log "Sending 'stop' command to Minecraft server..."
