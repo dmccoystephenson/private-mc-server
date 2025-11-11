@@ -13,8 +13,9 @@ send_alert() {
     local title="$1"
     local message="$2"
     local level="${3:-INFO}"
-    local source="minecraft-server"
     local alert_toggle="${4:-}"
+    local destinations="${5:-[\"DISCORD\"]}"  # Default to Discord only for lifecycle alerts
+    local source="minecraft-server"
     
     # Check if this type of alert is enabled (if toggle variable is provided)
     if [ -n "$alert_toggle" ]; then
@@ -39,7 +40,7 @@ send_alert() {
           -w "\n%{http_code}" \
           --max-time 5 \
           --connect-timeout 5 \
-          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\",\"destinations\":$destinations}" \
           2>&1 || echo "CURL_FAILED")
         
         http_code=$(echo "$curl_output" | tail -1)
