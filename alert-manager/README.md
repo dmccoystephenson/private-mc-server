@@ -20,6 +20,10 @@ The following environment variables can be configured in `.env`:
 - `ALERT_PORT`: Port for the alert manager API (default: `8090`)
 - `DISCORD_WEBHOOK_URL`: Discord webhook URL for sending notifications
 - `DISCORD_ENABLED`: Enable/disable Discord notifications (default: `false`)
+- `MINECRAFT_RCON_HOST`: Minecraft server hostname for RCON (default: `mcserver`)
+- `MINECRAFT_RCON_PORT`: Minecraft server RCON port (default: `25575`)
+- `MINECRAFT_RCON_PASSWORD`: Password for Minecraft RCON (default: uses `RCON_PASSWORD` from compose.yml)
+- `MINECRAFT_RCON_ENABLED`: Enable/disable Minecraft message sending (default: `true`)
 
 ### Discord Webhook Setup
 
@@ -33,6 +37,10 @@ To enable Discord notifications:
 2. Add the webhook URL to your `.env` file with `DISCORD_WEBHOOK_URL` and set `DISCORD_ENABLED=true`
 
 3. Restart the infrastructure
+
+### Minecraft RCON Setup
+
+The alert manager can send messages directly to the Minecraft server using RCON. This is enabled by default and uses the same RCON password configured for the Minecraft server. The minecraft-wrapper script uses this functionality to send shutdown warnings to players.
 
 ## Alert Levels
 
@@ -49,9 +57,29 @@ The alert manager supports four severity levels:
 
 **POST** `/api/alerts`
 
-Send an alert notification.
+Send an alert notification to one or more destinations.
 
-Request body: JSON object with title, message, level, and source fields.
+Request body:
+```json
+{
+  "title": "Alert Title",
+  "message": "Alert message content",
+  "level": "INFO",
+  "source": "module-name",
+  "destinations": ["DISCORD", "MINECRAFT"]
+}
+```
+
+Fields:
+- `title` (optional): Title of the alert
+- `message` (required): Message content
+- `level` (required): Alert severity level (INFO, WARNING, ERROR, CRITICAL)
+- `source` (required): Source module generating the alert
+- `destinations` (optional): Array of destination enums. If not specified, sends to all configured destinations.
+
+Supported destinations:
+- `DISCORD` - Sends alert to Discord via webhook
+- `MINECRAFT` - Sends message to Minecraft server via RCON
 
 Response: Success message confirming alert was sent.
 

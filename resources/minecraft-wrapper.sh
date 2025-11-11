@@ -13,8 +13,9 @@ send_alert() {
     local title="$1"
     local message="$2"
     local level="${3:-INFO}"
-    local source="minecraft-server"
     local alert_toggle="${4:-}"
+    local destinations="${5:-[\"DISCORD\"]}"  # Default to Discord only for lifecycle alerts
+    local source="minecraft-server"
     
     # Check if this type of alert is enabled (if toggle variable is provided)
     if [ -n "$alert_toggle" ]; then
@@ -39,7 +40,7 @@ send_alert() {
           -w "\n%{http_code}" \
           --max-time 5 \
           --connect-timeout 5 \
-          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\"}" \
+          -d "{\"title\":\"$title\",\"message\":\"$message\",\"level\":\"$level\",\"source\":\"$source\",\"destinations\":$destinations}" \
           2>&1 || echo "CURL_FAILED")
         
         http_code=$(echo "$curl_output" | tail -1)
@@ -56,6 +57,46 @@ send_alert() {
     fi
 }
 
+# Function: Send message to players via alert-manager
+# shellcheck disable=SC2317  # Function called from graceful_shutdown
+send_message() {
+    local text="$1"
+    local destination="${2:-MINECRAFT}"
+    
+    local alert_url="${ALERT_MANAGER_URL:-http://alert-manager:8090}/api/alerts"
+    
+    # Try to send message, but don't fail if it doesn't work
+    if command -v curl >/dev/null 2>&1; then
+        log "Sending message to $alert_url: $text"
+        
+        # Construct JSON array for destinations (uppercase for enum)
+        local destinations_json="[\"$destination\"]"
+        
+        # Capture HTTP response code and any error output
+        local http_code
+        local curl_output
+        curl_output=$(curl -X POST "$alert_url" \
+          -H "Content-Type: application/json" \
+          -w "\n%{http_code}" \
+          --max-time 5 \
+          --connect-timeout 5 \
+          -d "{\"message\":\"$text\",\"destinations\":$destinations_json,\"source\":\"minecraft-server\",\"level\":\"INFO\"}" \
+          2>&1 || echo "CURL_FAILED")
+        
+        http_code=$(echo "$curl_output" | tail -1)
+        
+        if [ "$curl_output" = "CURL_FAILED" ]; then
+            log "Message failed: curl command failed (connection error or timeout)"
+        elif [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+            log "Message sent successfully (HTTP $http_code)"
+        else
+            log "Message failed: HTTP $http_code"
+        fi
+    else
+        log "curl not available, skipping message: $text"
+    fi
+}
+
 # Variables
 SERVER_JAR="$1"
 SERVER_DIR="$2" 
@@ -69,19 +110,19 @@ graceful_shutdown() {
     log "Received shutdown signal, initiating graceful server stop..."
     
     if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        # Warn players before shutdown with countdown
+        # Warn players before shutdown with countdown via alert-manager
         log "Warning players of impending shutdown..."
         
-        echo "say Server is shutting down in 30 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 30 seconds!" "MINECRAFT"
         sleep 10
         
-        echo "say Server is shutting down in 20 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 20 seconds!" "MINECRAFT"
         sleep 10
         
-        echo "say Server is shutting down in 10 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 10 seconds!" "MINECRAFT"
         sleep 5
         
-        echo "say Server is shutting down in 5 seconds!" > "$INPUT_FIFO" 2>/dev/null || true
+        send_message "Server is shutting down in 5 seconds!" "MINECRAFT"
         sleep 5
         
         log "Sending 'stop' command to Minecraft server..."

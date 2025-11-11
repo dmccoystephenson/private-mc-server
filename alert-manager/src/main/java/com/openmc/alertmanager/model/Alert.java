@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * Represents an alert to be sent to administrators or community members
  */
@@ -33,4 +35,10 @@ public class Alert {
      * The source module that generated the alert (e.g., "backup-manager", "webapp")
      */
     private String source;
+    
+    /**
+     * List of destinations where the alert should be sent.
+     * If null or empty, defaults to all configured destinations.
+     */
+    private List<AlertDestination> destinations;
 }
