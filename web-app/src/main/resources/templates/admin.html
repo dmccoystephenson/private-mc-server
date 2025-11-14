@@ -243,6 +243,26 @@
             gap: 10px;
             margin-top: 10px;
         }
+        
+        .nav-logout {
+            margin-left: 10px;
+        }
+        
+        .view-list-btn {
+            margin-bottom: 10px;
+        }
+        
+        .ban-reason-input {
+            margin-top: 10px;
+        }
+        
+        .input-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 0.875em;
+        }
     </style>
 </head>
 <body>
@@ -255,7 +275,7 @@
         <div class="nav">
             <a href="/public">Public</a>
             <a href="/admin" class="active">Admin</a>
-            <button onclick="logout()" class="btn btn-secondary" style="margin-left: 10px;">Logout</button>
+            <button onclick="logout()" class="btn btn-secondary nav-logout">Logout</button>
         </div>
         
         <div class="card">
@@ -276,47 +296,52 @@
         
         <div class="management-section">
             <div class="card">
-                <h2>Whitelist Management</h2>
+                <h2>Allow List Management</h2>
                 <p style="color: #6b7280; margin-bottom: 15px;">Control who can join the server</p>
                 
                 <div class="toggle-buttons">
-                    <button class="btn btn-primary" onclick="toggleWhitelist('on')">Enable Whitelist</button>
-                    <button class="btn btn-secondary" onclick="toggleWhitelist('off')">Disable Whitelist</button>
-                    <button class="btn btn-secondary" onclick="viewWhitelist()">View List</button>
+                    <button class="btn btn-primary" onclick="toggleAllowList('on')">Enable Allow List</button>
+                    <button class="btn btn-secondary" onclick="toggleAllowList('off')">Disable Allow List</button>
+                    <button class="btn btn-secondary" onclick="viewAllowList()">View List</button>
                 </div>
                 
                 <div class="player-input-row">
+                    <label for="allowListPlayerInput" class="input-label">Player name</label>
                     <input type="text" 
-                           id="whitelistPlayerInput" 
+                           id="allowListPlayerInput" 
                            class="command-input" 
-                           placeholder="Player name">
-                    <button class="btn btn-primary" onclick="addToWhitelist()">Add</button>
-                    <button class="btn btn-danger" onclick="removeFromWhitelist()">Remove</button>
+                           placeholder="Player name"
+                           aria-label="Player name for allow list">
+                    <button class="btn btn-primary" onclick="addToAllowList()">Add</button>
+                    <button class="btn btn-danger" onclick="removeFromAllowList()">Remove</button>
                 </div>
                 
-                <div id="whitelistOutput" class="list-display"></div>
+                <div id="allowListOutput" class="list-display"></div>
             </div>
             
             <div class="card">
                 <h2>Ban Management</h2>
                 <p style="color: #6b7280; margin-bottom: 15px;">Manage banned players</p>
                 
-                <button class="btn btn-secondary" onclick="viewBanList()" style="margin-bottom: 10px;">View Ban List</button>
+                <button class="btn btn-secondary view-list-btn" onclick="viewBanList()">View Ban List</button>
                 
                 <div class="player-input-row">
+                    <label for="banPlayerInput" class="input-label">Player name</label>
                     <input type="text" 
                            id="banPlayerInput" 
                            class="command-input" 
-                           placeholder="Player name">
+                           placeholder="Player name"
+                           aria-label="Player name for ban">
                     <button class="btn btn-danger" onclick="banPlayer()">Ban</button>
                     <button class="btn btn-primary" onclick="unbanPlayer()">Unban</button>
                 </div>
                 
+                <label for="banReasonInput" class="input-label" style="margin-top: 10px;">Ban reason (optional)</label>
                 <input type="text" 
                        id="banReasonInput" 
-                       class="command-input" 
+                       class="command-input ban-reason-input" 
                        placeholder="Optional ban reason"
-                       style="margin-top: 10px;">
+                       aria-label="Optional ban reason">
                 
                 <div id="banOutput" class="list-display"></div>
             </div>
@@ -375,14 +400,14 @@
             }
         }
         
-        // Whitelist Management Functions
-        async function toggleWhitelist(action) {
-            const output = document.getElementById('whitelistOutput');
+        // Allow List Management Functions
+        async function toggleAllowList(action) {
+            const output = document.getElementById('allowListOutput');
             output.textContent = 'Processing...';
             output.classList.add('show');
             
             try {
-                const response = await fetch('/api/whitelist/toggle', {
+                const response = await fetch('/api/allowlist/toggle', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -401,13 +426,13 @@
             }
         }
         
-        async function viewWhitelist() {
-            const output = document.getElementById('whitelistOutput');
-            output.textContent = 'Loading whitelist...';
+        async function viewAllowList() {
+            const output = document.getElementById('allowListOutput');
+            output.textContent = 'Loading allow list...';
             output.classList.add('show');
             
             try {
-                const response = await fetch('/api/whitelist/list', {
+                const response = await fetch('/api/allowlist/list', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -423,8 +448,8 @@
             }
         }
         
-        async function addToWhitelist() {
-            const playerInput = document.getElementById('whitelistPlayerInput');
+        async function addToAllowList() {
+            const playerInput = document.getElementById('allowListPlayerInput');
             const player = playerInput.value.trim();
             
             if (!player) {
@@ -432,12 +457,12 @@
                 return;
             }
             
-            const output = document.getElementById('whitelistOutput');
+            const output = document.getElementById('allowListOutput');
             output.textContent = 'Adding player...';
             output.classList.add('show');
             
             try {
-                const response = await fetch('/api/whitelist/add', {
+                const response = await fetch('/api/allowlist/add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -457,8 +482,8 @@
             }
         }
         
-        async function removeFromWhitelist() {
-            const playerInput = document.getElementById('whitelistPlayerInput');
+        async function removeFromAllowList() {
+            const playerInput = document.getElementById('allowListPlayerInput');
             const player = playerInput.value.trim();
             
             if (!player) {
@@ -466,12 +491,12 @@
                 return;
             }
             
-            const output = document.getElementById('whitelistOutput');
+            const output = document.getElementById('allowListOutput');
             output.textContent = 'Removing player...';
             output.classList.add('show');
             
             try {
-                const response = await fetch('/api/whitelist/remove', {
+                const response = await fetch('/api/allowlist/remove', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 

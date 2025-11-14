@@ -174,15 +174,15 @@ class ServerControllerTest {
                 .andExpect(jsonPath("$.result").value(containsString("Command cannot be empty")));
     }
 
-    // Whitelist Management Tests
+    // Allow List Management Tests
     
     @Test
-    @DisplayName("Should enable whitelist with authentication")
-    void shouldEnableWhitelistWithAuthentication() throws Exception {
+    @DisplayName("Should enable allow list with authentication")
+    void shouldEnableAllowListWithAuthentication() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist on")).thenReturn("Turned on the whitelist");
 
-        mockMvc.perform(post("/api/whitelist/toggle")
+        mockMvc.perform(post("/api/allowlist/toggle")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"on\"}"))
@@ -191,12 +191,12 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should disable whitelist with authentication")
-    void shouldDisableWhitelistWithAuthentication() throws Exception {
+    @DisplayName("Should disable allow list with authentication")
+    void shouldDisableAllowListWithAuthentication() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist off")).thenReturn("Turned off the whitelist");
 
-        mockMvc.perform(post("/api/whitelist/toggle")
+        mockMvc.perform(post("/api/allowlist/toggle")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"off\"}"))
@@ -205,9 +205,9 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should reject whitelist toggle without authentication")
-    void shouldRejectWhitelistToggleWithoutAuthentication() throws Exception {
-        mockMvc.perform(post("/api/whitelist/toggle")
+    @DisplayName("Should reject allow list toggle without authentication")
+    void shouldRejectAllowListToggleWithoutAuthentication() throws Exception {
+        mockMvc.perform(post("/api/allowlist/toggle")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"on\"}"))
                 .andExpect(status().isOk())
@@ -215,11 +215,11 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should reject whitelist toggle with invalid action")
-    void shouldRejectWhitelistToggleWithInvalidAction() throws Exception {
+    @DisplayName("Should reject allow list toggle with invalid action")
+    void shouldRejectAllowListToggleWithInvalidAction() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
         
-        mockMvc.perform(post("/api/whitelist/toggle")
+        mockMvc.perform(post("/api/allowlist/toggle")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"invalid\"}"))
@@ -228,12 +228,12 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should add player to whitelist with authentication")
-    void shouldAddPlayerToWhitelistWithAuthentication() throws Exception {
+    @DisplayName("Should add player to allow list with authentication")
+    void shouldAddPlayerToAllowListWithAuthentication() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist add TestPlayer")).thenReturn("Added TestPlayer to the whitelist");
 
-        mockMvc.perform(post("/api/whitelist/add")
+        mockMvc.perform(post("/api/allowlist/add")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"player\":\"TestPlayer\"}"))
@@ -242,12 +242,12 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should remove player from whitelist with authentication")
-    void shouldRemovePlayerFromWhitelistWithAuthentication() throws Exception {
+    @DisplayName("Should remove player from allow list with authentication")
+    void shouldRemovePlayerFromAllowListWithAuthentication() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist remove TestPlayer")).thenReturn("Removed TestPlayer from the whitelist");
 
-        mockMvc.perform(post("/api/whitelist/remove")
+        mockMvc.perform(post("/api/allowlist/remove")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"player\":\"TestPlayer\"}"))
@@ -256,12 +256,12 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should list whitelist with authentication")
-    void shouldListWhitelistWithAuthentication() throws Exception {
+    @DisplayName("Should list allow list with authentication")
+    void shouldListAllowListWithAuthentication() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
         when(rconService.sendCommand("whitelist list")).thenReturn("There are 2 whitelisted players: Player1, Player2");
 
-        mockMvc.perform(post("/api/whitelist/list")
+        mockMvc.perform(post("/api/allowlist/list")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -269,9 +269,9 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should reject whitelist operations without authentication")
-    void shouldRejectWhitelistOperationsWithoutAuthentication() throws Exception {
-        mockMvc.perform(post("/api/whitelist/add")
+    @DisplayName("Should reject allow list operations without authentication")
+    void shouldRejectAllowListOperationsWithoutAuthentication() throws Exception {
+        mockMvc.perform(post("/api/allowlist/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"player\":\"TestPlayer\"}"))
                 .andExpect(status().isOk())
@@ -279,16 +279,42 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should reject whitelist add without player name")
-    void shouldRejectWhitelistAddWithoutPlayerName() throws Exception {
+    @DisplayName("Should reject allow list add without player name")
+    void shouldRejectAllowListAddWithoutPlayerName() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
         
-        mockMvc.perform(post("/api/whitelist/add")
+        mockMvc.perform(post("/api/allowlist/add")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"player\":\"\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(containsString("Player name is required")));
+    }
+    
+    @Test
+    @DisplayName("Should reject allow list add with invalid player name")
+    void shouldRejectAllowListAddWithInvalidPlayerName() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
+        mockMvc.perform(post("/api/allowlist/add")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"player\":\"Invalid@Name!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value(containsString("Invalid player name format")));
+    }
+    
+    @Test
+    @DisplayName("Should reject allow list add with player name too short")
+    void shouldRejectAllowListAddWithPlayerNameTooShort() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
+        mockMvc.perform(post("/api/allowlist/add")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"player\":\"ab\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value(containsString("Invalid player name format")));
     }
 
     // Ban Management Tests
@@ -369,6 +395,46 @@ class ServerControllerTest {
                         .content("{\"player\":\"\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(containsString("Player name is required")));
+    }
+    
+    @Test
+    @DisplayName("Should reject ban with invalid player name")
+    void shouldRejectBanWithInvalidPlayerName() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
+        mockMvc.perform(post("/api/ban/add")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"player\":\"Invalid@Name!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value(containsString("Invalid player name format")));
+    }
+    
+    @Test
+    @DisplayName("Should reject unban with invalid player name")
+    void shouldRejectUnbanWithInvalidPlayerName() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        
+        mockMvc.perform(post("/api/ban/remove")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"player\":\"Invalid@Name!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value(containsString("Invalid player name format")));
+    }
+    
+    @Test
+    @DisplayName("Should sanitize ban reason with special characters")
+    void shouldSanitizeBanReasonWithSpecialCharacters() throws Exception {
+        MockHttpSession session = createAuthenticatedSession();
+        when(rconService.sendCommand("ban TestPlayer Test reason")).thenReturn("Banned TestPlayer");
+        
+        mockMvc.perform(post("/api/ban/add")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"player\":\"TestPlayer\",\"reason\":\"Test;reason\\n\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("Banned TestPlayer"));
     }
     
     // Login Tests

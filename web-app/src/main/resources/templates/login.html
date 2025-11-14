@@ -163,18 +163,22 @@
             <h2>Login to Admin Panel</h2>
             <div id="errorMessage" class="error-message"></div>
             <form class="login-form" onsubmit="login(event)">
+                <label for="usernameInput" style="display: block; margin-bottom: 5px; color: #374151; font-weight: 500;">Admin username</label>
                 <input type="text" 
                        id="usernameInput" 
                        class="form-input" 
                        placeholder="Admin username" 
                        required
-                       autocomplete="username">
+                       autocomplete="username"
+                       aria-label="Admin username">
+                <label for="passwordInput" style="display: block; margin-bottom: 5px; margin-top: 10px; color: #374151; font-weight: 500;">Admin password</label>
                 <input type="password" 
                        id="passwordInput" 
                        class="form-input" 
                        placeholder="Admin password" 
                        required
-                       autocomplete="current-password">
+                       autocomplete="current-password"
+                       aria-label="Admin password">
                 <button type="submit" class="btn btn-primary">Login</button>
             </form>
         </div>

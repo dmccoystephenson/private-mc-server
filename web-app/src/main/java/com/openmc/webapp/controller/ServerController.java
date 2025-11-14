@@ -184,9 +184,17 @@ public class ServerController {
         return authenticated != null && authenticated;
     }
     
-    @PostMapping("/api/whitelist/toggle")
+    private boolean isValidMinecraftUsername(String username) {
+        // Minecraft usernames are 3-16 characters, alphanumeric and underscores only
+        if (username == null || username.length() < 3 || username.length() > 16) {
+            return false;
+        }
+        return username.matches("^[a-zA-Z0-9_]+$");
+    }
+    
+    @PostMapping("/api/allowlist/toggle")
     @ResponseBody
-    public Map<String, String> toggleWhitelist(@RequestBody Map<String, String> payload, HttpSession session) {
+    public Map<String, String> toggleAllowList(@RequestBody Map<String, String> payload, HttpSession session) {
         if (!isAuthenticated(session)) {
             return Map.of("result", "Error: You must be logged in to perform this action");
         }
@@ -201,9 +209,9 @@ public class ServerController {
         return Map.of("result", result);
     }
     
-    @PostMapping("/api/whitelist/add")
+    @PostMapping("/api/allowlist/add")
     @ResponseBody
-    public Map<String, String> addToWhitelist(@RequestBody Map<String, String> payload, HttpSession session) {
+    public Map<String, String> addToAllowList(@RequestBody Map<String, String> payload, HttpSession session) {
         if (!isAuthenticated(session)) {
             return Map.of("result", "Error: You must be logged in to perform this action");
         }
@@ -214,13 +222,18 @@ public class ServerController {
             return Map.of("result", "Error: Player name is required");
         }
         
-        String result = rconService.sendCommand("whitelist add " + player.trim());
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String result = rconService.sendCommand("whitelist add " + player);
         return Map.of("result", result);
     }
     
-    @PostMapping("/api/whitelist/remove")
+    @PostMapping("/api/allowlist/remove")
     @ResponseBody
-    public Map<String, String> removeFromWhitelist(@RequestBody Map<String, String> payload, HttpSession session) {
+    public Map<String, String> removeFromAllowList(@RequestBody Map<String, String> payload, HttpSession session) {
         if (!isAuthenticated(session)) {
             return Map.of("result", "Error: You must be logged in to perform this action");
         }
@@ -231,13 +244,18 @@ public class ServerController {
             return Map.of("result", "Error: Player name is required");
         }
         
-        String result = rconService.sendCommand("whitelist remove " + player.trim());
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String result = rconService.sendCommand("whitelist remove " + player);
         return Map.of("result", result);
     }
     
-    @PostMapping("/api/whitelist/list")
+    @PostMapping("/api/allowlist/list")
     @ResponseBody
-    public Map<String, String> listWhitelist(HttpSession session) {
+    public Map<String, String> listAllowList(HttpSession session) {
         if (!isAuthenticated(session)) {
             return Map.of("result", "Error: You must be logged in to perform this action");
         }
@@ -260,9 +278,16 @@ public class ServerController {
             return Map.of("result", "Error: Player name is required");
         }
         
-        String command = "ban " + player.trim();
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String command = "ban " + player;
         if (reason != null && !reason.trim().isEmpty()) {
-            command += " " + reason.trim();
+            // Sanitize reason by removing special characters that could cause issues
+            String sanitizedReason = reason.trim().replaceAll("[\\n\\r;]", " ");
+            command += " " + sanitizedReason;
         }
         
         String result = rconService.sendCommand(command);
@@ -282,7 +307,12 @@ public class ServerController {
             return Map.of("result", "Error: Player name is required");
         }
         
-        String result = rconService.sendCommand("pardon " + player.trim());
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String result = rconService.sendCommand("pardon " + player);
         return Map.of("result", result);
     }
     
