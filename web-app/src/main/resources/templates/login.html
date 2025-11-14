@@ -155,8 +155,8 @@
         </div>
         
         <div class="nav">
-            <a href="/public">Public</a>
-            <a href="/admin">Admin</a>
+            <a href="#" onclick="navigateTo('/public'); return false;">Public</a>
+            <a href="#" onclick="navigateTo('/admin'); return false;">Admin</a>
         </div>
         
         <div class="card">
@@ -185,6 +185,15 @@
     </div>
     
     <script>
+        // Utility function to navigate with port preservation
+        function navigateTo(path) {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const portSuffix = port ? ':' + port : '';
+            window.location.href = protocol + '//' + hostname + portSuffix + path;
+        }
+        
         async function login(event) {
             event.preventDefault();
             
@@ -215,7 +224,7 @@
                 
                 if (data.success) {
                     // Redirect to admin page on successful login
-                    window.location.href = '/admin';
+                    navigateTo('/admin');
                 } else {
                     errorMessage.textContent = data.message || 'Invalid username or password';
                     errorMessage.classList.add('show');

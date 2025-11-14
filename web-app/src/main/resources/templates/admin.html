@@ -273,8 +273,8 @@
         </div>
         
         <div class="nav">
-            <a href="/public">Public</a>
-            <a href="/admin" class="active">Admin</a>
+            <a href="#" onclick="navigateTo('/public'); return false;">Public</a>
+            <a href="#" onclick="navigateTo('/admin'); return false;" class="active">Admin</a>
             <button onclick="logout()" class="btn btn-secondary nav-logout">Logout</button>
         </div>
         
@@ -349,6 +349,15 @@
     </div>
     
     <script>
+        // Utility function to navigate with port preservation
+        function navigateTo(path) {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const portSuffix = port ? ':' + port : '';
+            window.location.href = protocol + '//' + hostname + portSuffix + path;
+        }
+        
         async function logout() {
             try {
                 await fetch('/api/logout', {
@@ -357,10 +366,10 @@
                         'Content-Type': 'application/json',
                     }
                 });
-                window.location.href = '/login';
+                navigateTo('/login');
             } catch (error) {
                 console.error('Logout error:', error);
-                window.location.href = '/login';
+                navigateTo('/login');
             }
         }
         
@@ -393,7 +402,7 @@
                 
                 // Check if session expired
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
@@ -419,7 +428,7 @@
                 output.textContent = data.result;
                 
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
@@ -441,7 +450,7 @@
                 output.textContent = data.result;
                 
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
@@ -475,7 +484,7 @@
                 playerInput.value = '';
                 
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
@@ -509,7 +518,7 @@
                 playerInput.value = '';
                 
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
@@ -532,7 +541,7 @@
                 output.textContent = data.result;
                 
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
@@ -570,7 +579,7 @@
                 reasonInput.value = '';
                 
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
@@ -604,7 +613,7 @@
                 playerInput.value = '';
                 
                 if (data.result && data.result.includes('must be logged in')) {
-                    window.location.href = '/login';
+                    navigateTo('/login');
                 }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
