@@ -73,6 +73,25 @@
             font-weight: 600;
         }
         
+        .nav button {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            margin: 0 5px;
+            transition: background 0.3s ease;
+            display: inline-block;
+            margin-bottom: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .nav button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
         .card {
             background: white;
             border-radius: 12px;
@@ -159,6 +178,91 @@
         .command-output.show {
             display: block;
         }
+        
+        .management-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .management-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .list-display {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 60px;
+            display: none;
+        }
+        
+        .list-display.show {
+            display: block;
+        }
+        
+        .player-input-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .player-input-row .command-input {
+            flex: 1;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+        }
+        
+        .toggle-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .nav-logout {
+            margin-left: 10px;
+        }
+        
+        .view-list-btn {
+            margin-bottom: 10px;
+        }
+        
+        .ban-reason-input {
+            margin-top: 10px;
+        }
+        
+        .input-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 0.875em;
+        }
     </style>
 </head>
 <body>
@@ -169,24 +273,15 @@
         </div>
         
         <div class="nav">
-            <a href="/public">Public</a>
-            <a href="/admin" class="active">Admin</a>
+            <a href="#" onclick="navigateTo('/public'); return false;">Public</a>
+            <a href="#" onclick="navigateTo('/admin'); return false;" class="active">Admin</a>
+            <button onclick="logout()" class="btn btn-secondary nav-logout">Logout</button>
         </div>
         
         <div class="card">
             <h2>Admin Console</h2>
             <p style="color: #6b7280; margin-bottom: 15px;">Send commands to the server using RCON</p>
             <form class="command-form" onsubmit="sendCommand(event)">
-                <input type="text" 
-                       id="usernameInput" 
-                       class="command-input" 
-                       placeholder="Admin username" 
-                       required>
-                <input type="password" 
-                       id="passwordInput" 
-                       class="command-input" 
-                       placeholder="Admin password" 
-                       required>
                 <div class="command-row">
                     <input type="text" 
                            id="commandInput" 
@@ -198,22 +293,95 @@
             </form>
             <div id="commandOutput" class="command-output"></div>
         </div>
+        
+        <div class="management-section">
+            <div class="card">
+                <h2>Allow List Management</h2>
+                <p style="color: #6b7280; margin-bottom: 15px;">Control who can join the server</p>
+                
+                <div class="toggle-buttons">
+                    <button class="btn btn-primary" onclick="toggleAllowList('on')">Enable Allow List</button>
+                    <button class="btn btn-secondary" onclick="toggleAllowList('off')">Disable Allow List</button>
+                    <button class="btn btn-secondary" onclick="viewAllowList()">View List</button>
+                </div>
+                
+                <div class="player-input-row">
+                    <label for="allowListPlayerInput" class="input-label">Player name</label>
+                    <input type="text" 
+                           id="allowListPlayerInput" 
+                           class="command-input" 
+                           placeholder="Player name"
+                           aria-label="Player name for allow list">
+                    <button class="btn btn-primary" onclick="addToAllowList()">Add</button>
+                    <button class="btn btn-danger" onclick="removeFromAllowList()">Remove</button>
+                </div>
+                
+                <div id="allowListOutput" class="list-display"></div>
+            </div>
+            
+            <div class="card">
+                <h2>Ban Management</h2>
+                <p style="color: #6b7280; margin-bottom: 15px;">Manage banned players</p>
+                
+                <button class="btn btn-secondary view-list-btn" onclick="viewBanList()">View Ban List</button>
+                
+                <div class="player-input-row">
+                    <label for="banPlayerInput" class="input-label">Player name</label>
+                    <input type="text" 
+                           id="banPlayerInput" 
+                           class="command-input" 
+                           placeholder="Player name"
+                           aria-label="Player name for ban">
+                    <button class="btn btn-danger" onclick="banPlayer()">Ban</button>
+                    <button class="btn btn-primary" onclick="unbanPlayer()">Unban</button>
+                </div>
+                
+                <label for="banReasonInput" class="input-label" style="margin-top: 10px;">Ban reason (optional)</label>
+                <input type="text" 
+                       id="banReasonInput" 
+                       class="command-input ban-reason-input" 
+                       placeholder="Optional ban reason"
+                       aria-label="Optional ban reason">
+                
+                <div id="banOutput" class="list-display"></div>
+            </div>
+        </div>
     </div>
     
     <script>
+        // Utility function to navigate with port preservation
+        function navigateTo(path) {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const portSuffix = port ? ':' + port : '';
+            window.location.href = protocol + '//' + hostname + portSuffix + path;
+        }
+        
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                navigateTo('/login');
+            } catch (error) {
+                console.error('Logout error:', error);
+                navigateTo('/login');
+            }
+        }
+        
         async function sendCommand(event) {
             event.preventDefault();
             
-            const usernameInput = document.getElementById('usernameInput');
-            const passwordInput = document.getElementById('passwordInput');
             const commandInput = document.getElementById('commandInput');
             const output = document.getElementById('commandOutput');
             
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value.trim();
             const command = commandInput.value.trim();
             
-            if (!username || !password || !command) return;
+            if (!command) return;
             
             output.textContent = 'Sending command...';
             output.classList.add('show');
@@ -225,14 +393,228 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ 
-                        username: username,
-                        password: password,
                         command: command 
                     })
                 });
                 
                 const data = await response.json();
                 output.textContent = '> ' + command + '\n\n' + data.result;
+                
+                // Check if session expired
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        // Allow List Management Functions
+        async function toggleAllowList(action) {
+            const output = document.getElementById('allowListOutput');
+            output.textContent = 'Processing...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/allowlist/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: action
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function viewAllowList() {
+            const output = document.getElementById('allowListOutput');
+            output.textContent = 'Loading allow list...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/allowlist/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function addToAllowList() {
+            const playerInput = document.getElementById('allowListPlayerInput');
+            const player = playerInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('allowListOutput');
+            output.textContent = 'Adding player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/allowlist/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        player: player
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function removeFromAllowList() {
+            const playerInput = document.getElementById('allowListPlayerInput');
+            const player = playerInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('allowListOutput');
+            output.textContent = 'Removing player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/allowlist/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        player: player
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        // Ban Management Functions
+        async function viewBanList() {
+            const output = document.getElementById('banOutput');
+            output.textContent = 'Loading ban list...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/ban/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function banPlayer() {
+            const playerInput = document.getElementById('banPlayerInput');
+            const reasonInput = document.getElementById('banReasonInput');
+            const player = playerInput.value.trim();
+            const reason = reasonInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('banOutput');
+            output.textContent = 'Banning player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/ban/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        player: player,
+                        reason: reason
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
+                reasonInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function unbanPlayer() {
+            const playerInput = document.getElementById('banPlayerInput');
+            const player = playerInput.value.trim();
+            
+            if (!player) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const output = document.getElementById('banOutput');
+            output.textContent = 'Unbanning player...';
+            output.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/ban/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        player: player
+                    })
+                });
+                
+                const data = await response.json();
+                output.textContent = data.result;
+                playerInput.value = '';
+                
+                if (data.result && data.result.includes('must be logged in')) {
+                    navigateTo('/login');
+                }
             } catch (error) {
                 output.textContent = 'Error: ' + error.message;
             }

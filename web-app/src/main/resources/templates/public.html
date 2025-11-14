@@ -382,8 +382,8 @@
             </div>
             
             <div class="nav">
-                <a href="/public" class="active">Public</a>
-                <a href="/admin">Admin</a>
+                <a href="#" onclick="navigateTo('/public'); return false;" class="active">Public</a>
+                <a href="#" onclick="navigateTo('/admin'); return false;">Admin</a>
             </div>
         </div>
         
@@ -599,6 +599,15 @@
     </div>
     
     <script th:inline="javascript">
+        // Utility function to navigate with port preservation
+        function navigateTo(path) {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const portSuffix = port ? ':' + port : '';
+            window.location.href = protocol + '//' + hostname + portSuffix + path;
+        }
+        
         // Utility function to convert timestamp to relative time
         function getRelativeTime(timestamp) {
             if (!timestamp) return 'N/A';

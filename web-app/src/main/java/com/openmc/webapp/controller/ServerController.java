@@ -5,6 +5,7 @@ import com.openmc.webapp.model.ActivityTrackerStats;
 import com.openmc.webapp.model.LeaderboardEntry;
 import com.openmc.webapp.service.ActivityTrackerService;
 import com.openmc.webapp.service.RconService;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -51,8 +52,23 @@ public class ServerController {
         return "public";
     }
     
+    @GetMapping("/login")
+    public String loginPage(Model model) {
+        model.addAttribute("dashboardTitle", serverConfig.getDashboardTitle());
+        model.addAttribute("dashboardSubtitle", serverConfig.getDashboardSubtitle());
+        model.addAttribute("dashboardPrimaryColor", serverConfig.getDashboardPrimaryColor());
+        model.addAttribute("dashboardSecondaryColor", serverConfig.getDashboardSecondaryColor());
+        return "login";
+    }
+    
     @GetMapping("/admin")
-    public String adminPage(Model model) {
+    public String adminPage(HttpSession session, Model model) {
+        // Check if user is authenticated
+        Boolean isAuthenticated = (Boolean) session.getAttribute("authenticated");
+        if (isAuthenticated == null || !isAuthenticated) {
+            return "redirect:/login";
+        }
+        
         model.addAttribute("dashboardTitle", serverConfig.getDashboardTitle());
         model.addAttribute("dashboardSubtitle", serverConfig.getDashboardSubtitle());
         model.addAttribute("dashboardPrimaryColor", serverConfig.getDashboardPrimaryColor());
@@ -62,20 +78,14 @@ public class ServerController {
     
     @PostMapping("/api/command")
     @ResponseBody
-    public Map<String, String> sendCommand(@RequestBody Map<String, String> payload) {
-        String username = payload.get("username");
-        String password = payload.get("password");
+    public Map<String, String> sendCommand(@RequestBody Map<String, String> payload, HttpSession session) {
+        // Check if user is authenticated
+        Boolean isAuthenticated = (Boolean) session.getAttribute("authenticated");
+        if (isAuthenticated == null || !isAuthenticated) {
+            return Map.of("result", "Error: You must be logged in to execute commands");
+        }
+        
         String command = payload.get("command");
-        
-        // Validate credentials
-        if (username == null || password == null) {
-            return Map.of("result", "Error: Username and password are required");
-        }
-        
-        if (!serverConfig.getAdminUsername().equals(username) || 
-            !serverConfig.getAdminPassword().equals(password)) {
-            return Map.of("result", "Error: Invalid username or password");
-        }
         
         // Validate command
         if (command == null || command.trim().isEmpty()) {
@@ -132,5 +142,188 @@ public class ServerController {
         boolean enabled = activityTrackerService.isEnabled();
         logger.debug("API request: /api/activity-tracker/enabled - returning: {}", enabled);
         return Map.of("enabled", enabled);
+    }
+    
+    // Authentication Endpoints
+    
+    @PostMapping("/api/login")
+    @ResponseBody
+    public Map<String, Object> login(@RequestBody Map<String, String> payload, HttpSession session) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        
+        if (username == null || password == null) {
+            return Map.of("success", false, "message", "Username and password are required");
+        }
+        
+        if (serverConfig.getAdminUsername().equals(username) && 
+            serverConfig.getAdminPassword().equals(password)) {
+            session.setAttribute("authenticated", true);
+            session.setAttribute("username", username);
+            logger.info("User {} successfully logged in", username);
+            return Map.of("success", true, "message", "Login successful");
+        } else {
+            logger.warn("Failed login attempt for username: {}", username);
+            return Map.of("success", false, "message", "Invalid username or password");
+        }
+    }
+    
+    @PostMapping("/api/logout")
+    @ResponseBody
+    public Map<String, Object> logout(HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        session.invalidate();
+        logger.info("User {} logged out", username);
+        return Map.of("success", true, "message", "Logged out successfully");
+    }
+    
+    // Allow/Deny List Management Endpoints
+    
+    private boolean isAuthenticated(HttpSession session) {
+        Boolean authenticated = (Boolean) session.getAttribute("authenticated");
+        return authenticated != null && authenticated;
+    }
+    
+    private boolean isValidMinecraftUsername(String username) {
+        // Minecraft usernames are 3-16 characters, alphanumeric and underscores only
+        if (username == null || username.length() < 3 || username.length() > 16) {
+            return false;
+        }
+        return username.matches("^[a-zA-Z0-9_]+$");
+    }
+    
+    @PostMapping("/api/allowlist/toggle")
+    @ResponseBody
+    public Map<String, String> toggleAllowList(@RequestBody Map<String, String> payload, HttpSession session) {
+        if (!isAuthenticated(session)) {
+            return Map.of("result", "Error: You must be logged in to perform this action");
+        }
+        
+        String action = payload.get("action"); // "on" or "off"
+        
+        if (action == null || (!action.equals("on") && !action.equals("off"))) {
+            return Map.of("result", "Error: Action must be 'on' or 'off'");
+        }
+        
+        String result = rconService.sendCommand("whitelist " + action);
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/allowlist/add")
+    @ResponseBody
+    public Map<String, String> addToAllowList(@RequestBody Map<String, String> payload, HttpSession session) {
+        if (!isAuthenticated(session)) {
+            return Map.of("result", "Error: You must be logged in to perform this action");
+        }
+        
+        String player = payload.get("player");
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String result = rconService.sendCommand("whitelist add " + player);
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/allowlist/remove")
+    @ResponseBody
+    public Map<String, String> removeFromAllowList(@RequestBody Map<String, String> payload, HttpSession session) {
+        if (!isAuthenticated(session)) {
+            return Map.of("result", "Error: You must be logged in to perform this action");
+        }
+        
+        String player = payload.get("player");
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String result = rconService.sendCommand("whitelist remove " + player);
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/allowlist/list")
+    @ResponseBody
+    public Map<String, String> listAllowList(HttpSession session) {
+        if (!isAuthenticated(session)) {
+            return Map.of("result", "Error: You must be logged in to perform this action");
+        }
+        
+        String result = rconService.sendCommand("whitelist list");
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/ban/add")
+    @ResponseBody
+    public Map<String, String> banPlayer(@RequestBody Map<String, String> payload, HttpSession session) {
+        if (!isAuthenticated(session)) {
+            return Map.of("result", "Error: You must be logged in to perform this action");
+        }
+        
+        String player = payload.get("player");
+        String reason = payload.get("reason");
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String command = "ban " + player;
+        if (reason != null && !reason.trim().isEmpty()) {
+            // Sanitize reason by removing special characters that could cause issues
+            String sanitizedReason = reason.trim().replaceAll("[\\n\\r;]", " ");
+            command += " " + sanitizedReason;
+        }
+        
+        String result = rconService.sendCommand(command);
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/ban/remove")
+    @ResponseBody
+    public Map<String, String> unbanPlayer(@RequestBody Map<String, String> payload, HttpSession session) {
+        if (!isAuthenticated(session)) {
+            return Map.of("result", "Error: You must be logged in to perform this action");
+        }
+        
+        String player = payload.get("player");
+        
+        if (player == null || player.trim().isEmpty()) {
+            return Map.of("result", "Error: Player name is required");
+        }
+        
+        player = player.trim();
+        if (!isValidMinecraftUsername(player)) {
+            return Map.of("result", "Error: Invalid player name format (3-16 characters, alphanumeric and underscores only)");
+        }
+        
+        String result = rconService.sendCommand("pardon " + player);
+        return Map.of("result", result);
+    }
+    
+    @PostMapping("/api/ban/list")
+    @ResponseBody
+    public Map<String, String> listBans(HttpSession session) {
+        if (!isAuthenticated(session)) {
+            return Map.of("result", "Error: You must be logged in to perform this action");
+        }
+        
+        String result = rconService.sendCommand("banlist");
+        return Map.of("result", result);
     }
 }
